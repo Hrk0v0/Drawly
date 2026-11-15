@@ -1,0 +1,3197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <!-- iPad・iOS PWA 必須メタタグ -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="LOTTERY STUDIO">
+  <meta name="theme-color" content="#F5F5F7">
+  <link rel="apple-touch-icon" href="/app-icon.png">
+  <title>LOTTERY STUDIO</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons (軽量ベクターアイコン) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- QRコード生成ライブラリ (誤り訂正レベルH対応・オフライン完結) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+
+  <!-- Google Fonts: Inter & Noto Sans JP -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-canvas: #F5F5F7;
+      --bg-surface: #FFFFFF;
+      --text-primary: #1D1D1F;
+      --text-secondary: #86868B;
+      --border-subtle: rgba(0, 0, 0, 0.06);
+      --accent-dark: #1D1D1F;
+      --accent-blue: #0071E3;
+      --accent-blue-hover: #0077ED;
+      --accent-gold: #B48A3E;
+      --apple-ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --apple-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    input, textarea, select {
+      user-select: text;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Noto Sans JP', sans-serif;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Safe Area 対応 */
+    .safe-area-pad {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+
+    /* Apple風カード＆シャドウ */
+    .apple-card {
+      background: #FFFFFF;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 24px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.035), 0 1px 3px rgba(0, 0, 0, 0.02);
+      transition: transform 0.45s var(--apple-ease), box-shadow 0.45s var(--apple-ease), border-color 0.35s ease;
+    }
+
+    .apple-pill-btn {
+      transition: transform 0.28s var(--apple-spring), background-color 0.25s ease, box-shadow 0.3s var(--apple-ease), opacity 0.25s ease;
+    }
+    .apple-pill-btn:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    /* Apple公式サイト風のブルーCTAボタン */
+    .apple-blue-cta {
+      background: linear-gradient(180deg, #0A84FF 0%, #0071E3 100%);
+      color: #FFFFFF;
+      box-shadow: 0 10px 26px rgba(0, 113, 227, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+      transition: transform 0.32s var(--apple-spring), background 0.25s ease, box-shadow 0.35s var(--apple-ease), opacity 0.25s ease;
+    }
+    .apple-blue-cta:hover:not(:disabled) {
+      background: linear-gradient(180deg, #1E8EFF 0%, #0077ED 100%);
+      box-shadow: 0 14px 34px rgba(0, 113, 227, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      transform: translateY(-1px);
+    }
+    .apple-blue-cta:active:not(:disabled) {
+      transform: scale(0.965) translateY(0);
+      box-shadow: 0 6px 16px rgba(0, 113, 227, 0.24);
+    }
+
+    /* スロットリール演出 */
+    .reel-window {
+      position: relative;
+      overflow: hidden;
+      background: #FFFFFF;
+      border-radius: 26px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      box-shadow: inset 0 8px 20px rgba(0, 0, 0, 0.03), inset 0 -8px 20px rgba(0, 0, 0, 0.03), 0 10px 28px rgba(0, 0, 0, 0.035);
+      transition: transform 0.45s var(--apple-ease), box-shadow 0.45s var(--apple-ease), border-color 0.45s ease, background 0.45s ease;
+    }
+
+    .reel-strip {
+      display: flex;
+      flex-direction: column;
+      will-change: transform;
+    }
+
+    .reel-mask-top {
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 22%;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.94), rgba(255,255,255,0));
+      pointer-events: none;
+      z-index: 2;
+    }
+    .reel-mask-bottom {
+      position: absolute;
+      bottom: 0; left: 0; right: 0; height: 22%;
+      background: linear-gradient(to top, rgba(255,255,255,0.94), rgba(255,255,255,0));
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .reel-stopped-pulse {
+      animation: reelLock 0.52s var(--apple-spring);
+    }
+    @keyframes reelLock {
+      0% { transform: scale(1); }
+      38% { transform: scale(1.032); }
+      100% { transform: scale(1); }
+    }
+
+    /* 4個目出現前の「え？…！」という鼓動・予兆フレーム演出 */
+    .frame-suspense-pulse {
+      animation: frameSuspense 0.9s var(--apple-ease) forwards;
+    }
+    @keyframes frameSuspense {
+      0% {
+        transform: scale(1);
+        border-color: rgba(0, 0, 0, 0.05);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.03);
+      }
+      45% {
+        transform: scale(0.985);
+        border-color: rgba(0, 113, 227, 0.35);
+        box-shadow: 0 16px 48px rgba(0, 113, 227, 0.14);
+      }
+      100% {
+        transform: scale(1.012);
+        border-color: rgba(0, 113, 227, 0.45);
+        box-shadow: 0 20px 54px rgba(0, 113, 227, 0.18);
+      }
+    }
+
+    /* 4個目以降のポコッとバウンス出現アニメーション */
+    .pop-in-extra {
+      border-color: rgba(0, 113, 227, 0.38) !important;
+      box-shadow: 0 14px 36px rgba(0, 113, 227, 0.16), inset 0 0 0 1px rgba(0, 113, 227, 0.15) !important;
+      animation: popInExtra 0.78s cubic-bezier(0.22, 1.48, 0.36, 1) forwards;
+    }
+    @keyframes popInExtra {
+      0% {
+        opacity: 0;
+        transform: scale(0.35) translateY(32px);
+        filter: blur(6px);
+      }
+      60% {
+        opacity: 1;
+        transform: scale(1.055) translateY(-4px);
+        filter: blur(0px);
+      }
+      82% {
+        transform: scale(0.985) translateY(1px);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    /* 特別枠リーチ時の2枠ゴールド点灯 */
+    .special-reach-glow {
+      border-color: rgba(180, 138, 62, 0.45) !important;
+      box-shadow: 0 12px 32px rgba(180, 138, 62, 0.18) !important;
+    }
+
+    /* 特別枠当選時のシャンパンゴールド昇格＆浮き上がり→落下演出 */
+    .special-reel-glow {
+      border-color: rgba(180, 138, 62, 0.75) !important;
+      background: linear-gradient(180deg, #FFFFFF 0%, #FDF8EC 100%) !important;
+      box-shadow: 0 18px 46px rgba(180, 138, 62, 0.32), inset 0 0 0 1.5px rgba(212, 175, 55, 0.4) !important;
+      animation: specialReelCelebrate 0.65s var(--apple-spring) forwards;
+    }
+    @keyframes specialReelCelebrate {
+      0% { transform: scale(1); }
+      45% { transform: scale(1.055) translateY(-6px); }
+      100% { transform: scale(1.02) translateY(0); }
+    }
+
+    .special-frame-aura {
+      border-color: rgba(180, 138, 62, 0.5) !important;
+      background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(253,248,236,0.92) 100%) !important;
+      box-shadow: 0 24px 64px rgba(180, 138, 62, 0.25) !important;
+    }
+
+    .special-drop-out {
+      animation: specialDropDown 0.92s cubic-bezier(0.32, 0.06, 0.22, 1) forwards;
+    }
+    @keyframes specialDropDown {
+      0% {
+        opacity: 1;
+        transform: translateY(0) scale(1.01);
+      }
+      24% {
+        opacity: 1;
+        transform: translateY(-16px) scale(1.03);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(150px) scale(0.93);
+        filter: blur(6px);
+      }
+    }
+
+    .special-stage-reveal {
+      animation: specialStageEmerge 0.8s var(--apple-ease) forwards;
+    }
+    @keyframes specialStageEmerge {
+      0% {
+        opacity: 0;
+        transform: translateY(-42px) scale(0.96);
+        filter: blur(8px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
+    }
+
+    /* ステージ間のぬるっとした画面遷移アニメーション */
+    .stage-transition-in {
+      animation: stageFluidIn 0.6s var(--apple-ease) forwards;
+    }
+    @keyframes stageFluidIn {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.985);
+        filter: blur(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+      }
+    }
+
+    .fade-scale-in {
+      animation: fadeScaleIn 0.5s var(--apple-ease) forwards;
+    }
+    @keyframes fadeScaleIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* ===================================================================
+       QRコード 拡大フォーカス（ふわっと自然なトランジション）
+       =================================================================== */
+    #qr-focus-overlay {
+      opacity: 0;
+      backdrop-filter: blur(0px);
+      -webkit-backdrop-filter: blur(0px);
+      background-color: rgba(245, 245, 247, 0);
+      transition: opacity 0.52s var(--apple-ease),
+                  backdrop-filter 0.52s var(--apple-ease),
+                  -webkit-backdrop-filter 0.52s var(--apple-ease),
+                  background-color 0.52s var(--apple-ease);
+      pointer-events: none;
+    }
+    #qr-focus-overlay.is-visible {
+      opacity: 1;
+      backdrop-filter: blur(22px) saturate(160%);
+      -webkit-backdrop-filter: blur(22px) saturate(160%);
+      background-color: rgba(29, 29, 31, 0.32);
+      pointer-events: auto;
+    }
+
+    #qr-focus-card {
+      opacity: 0;
+      transform: scale(0.86) translateY(16px);
+      filter: blur(8px);
+      transition: transform 0.56s var(--apple-ease),
+                  opacity 0.48s var(--apple-ease),
+                  filter 0.48s var(--apple-ease),
+                  box-shadow 0.52s var(--apple-ease);
+    }
+    #qr-focus-overlay.is-visible #qr-focus-card {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      filter: blur(0px);
+    }
+
+    /* ===================================================================
+       完全空白のスワイプ認証オーバーレイ
+       =================================================================== */
+    #auth-modal {
+      opacity: 0;
+      backdrop-filter: blur(0px);
+      -webkit-backdrop-filter: blur(0px);
+      background-color: rgba(255, 255, 255, 0);
+      transition: opacity 0.45s var(--apple-ease),
+                  backdrop-filter 0.45s var(--apple-ease),
+                  -webkit-backdrop-filter 0.45s var(--apple-ease),
+                  background-color 0.45s var(--apple-ease);
+      pointer-events: none;
+    }
+    #auth-modal.is-visible {
+      opacity: 1;
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      background-color: rgba(255, 255, 255, 0.96);
+      pointer-events: auto;
+    }
+
+    /* 縦画面警告バナー（iPad横画面推奨） */
+    #portrait-banner {
+      display: none;
+    }
+    @media screen and (orientation: portrait) and (max-width: 900px) {
+      #portrait-banner {
+        display: flex;
+      }
+    }
+
+    /* スクロールバー洗練化 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.16);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body class="safe-area-pad flex flex-col min-h-screen">
+
+  <!-- 縦画面時の控えめな横画面推奨バナー -->
+  <div id="portrait-banner" class="bg-[#1D1D1F] text-white text-xs py-2 px-4 items-center justify-center gap-2 z-50">
+    <i data-lucide="tablet" class="w-4 h-4 rotate-90"></i>
+    <span>iPadの横画面（ランドスケープ）でのご利用を推奨しています</span>
+  </div>
+
+  <!-- トースト通知コンテナ（主に管理画面操作用） -->
+  <div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- 汎用確認モーダル（alert/confirm代替） -->
+  <div id="confirm-modal" class="fixed inset-0 z-[90] hidden items-center justify-center bg-black/35 backdrop-blur-md p-6">
+    <div class="apple-card max-w-md w-full p-7 fade-scale-in">
+      <h3 id="confirm-title" class="text-lg font-semibold text-[#1D1D1F] mb-2">確認</h3>
+      <p id="confirm-message" class="text-sm text-[#86868B] leading-relaxed mb-6"></p>
+      <div class="flex items-center justify-end gap-3">
+        <button id="confirm-cancel-btn" class="apple-pill-btn px-5 py-2.5 rounded-full text-sm font-medium bg-[#F5F5F7] text-[#1D1D1F] hover:bg-gray-200 min-h-[44px]">キャンセル</button>
+        <button id="confirm-ok-btn" class="apple-pill-btn px-6 py-2.5 rounded-full text-sm font-medium bg-[#0071E3] text-white hover:bg-[#0077ED] min-h-[44px]">実行する</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 1. 参加者向けメインビュー（極限ミニマルUI）                           -->
+  <!-- ===================================================================== -->
+  <div id="participant-view" class="flex-1 flex flex-col justify-between p-6 lg:p-10 max-w-[1400px] w-full mx-auto">
+
+    <!-- ミニマルヘッダー -->
+    <header class="flex items-center justify-between min-h-[44px]">
+      <div id="simulation-exit-slot"></div>
+
+      <div class="flex items-center gap-2.5 ml-auto">
+        <!-- ネットワーク接続状態（Appleカメラの緑ランプを連想させない落ち着いたスカイブルー系インジケーター） -->
+        <div class="w-8 h-8 rounded-full bg-white/80 border border-black/5 flex items-center justify-center shadow-2xs" aria-hidden="true" title="接続ステータス">
+          <span id="network-dot" class="w-1.5 h-1.5 rounded-full bg-sky-500 transition-colors duration-300"></span>
+        </div>
+
+        <!-- サウンドミュート切替アイコン -->
+        <button id="sound-toggle-btn" onclick="toggleSoundSetting()" aria-label="サウンド切替" class="apple-pill-btn w-10 h-10 rounded-full bg-white/90 border border-black/5 flex items-center justify-center text-[#1D1D1F] hover:bg-white shadow-2xs">
+          <i id="sound-icon" data-lucide="volume-2" class="w-4 h-4"></i>
+        </button>
+
+        <!-- 管理画面認証へ -->
+        <button id="open-admin-auth-btn" onclick="openAuthModal()" aria-label="設定" class="apple-pill-btn w-10 h-10 rounded-full bg-white/90 border border-black/5 flex items-center justify-center text-[#86868B] hover:text-[#1D1D1F] hover:bg-white shadow-2xs">
+          <i data-lucide="settings" class="w-[18px] h-[18px]"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- ------------------------------------------------------------------- -->
+    <!-- A. スロット抽選ステージ                                              -->
+    <!-- ------------------------------------------------------------------- -->
+    <main id="stage-draw" class="flex-1 flex flex-col items-center justify-center my-2 stage-transition-in">
+      <div class="text-center mb-7">
+        <div id="special-headline-badge" class="hidden inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#B48A3E]/15 border border-[#B48A3E]/30 text-[#9A7228] text-xs font-semibold tracking-widest mb-2.5 fade-scale-in">
+          <i data-lucide="crown" class="w-3.5 h-3.5"></i>
+          <span>SPECIAL CHANCE</span>
+        </div>
+        <h2 id="draw-headline" class="text-2xl lg:text-[32px] font-semibold tracking-tight text-[#1D1D1F] transition-colors duration-300">
+          ボタンを押して抽選を開始してください
+        </h2>
+      </div>
+
+      <!-- スロットリールコンテナ（特別枠当選時はここから枠が下に落ちて切り替わる） -->
+      <div id="slot-machine-frame" class="w-full max-w-5xl bg-white/75 backdrop-blur-xl border border-black/[0.05] rounded-[34px] p-5 lg:p-8 shadow-[0_12px_40px_rgba(0,0,0,0.03)] transition-all duration-500">
+        <div id="reels-container" class="grid grid-cols-3 gap-4 lg:gap-6 w-full">
+          <!-- JSで動的にリールを生成 -->
+        </div>
+      </div>
+
+      <!-- 抽選スタートボタンエリア（Appleブルー） -->
+      <div id="draw-cta-area" class="mt-9 flex flex-col items-center transition-opacity duration-300">
+        <button id="start-draw-btn" onclick="startLottery()" class="apple-blue-cta px-14 py-5 rounded-full text-lg font-semibold tracking-wide disabled:opacity-35 disabled:cursor-not-allowed flex items-center gap-3 min-w-[270px] justify-center min-h-[64px]">
+          <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+          <span id="start-draw-btn-text">抽選スタート</span>
+        </button>
+        <p id="draw-availability-hint" class="text-xs font-medium text-[#86868B] mt-3.5 tracking-wide"></p>
+      </div>
+    </main>
+
+    <!-- ------------------------------------------------------------------- -->
+    <!-- B. 特別枠「好きなセットを選べる」選択ステージ（特別感アップ版）      -->
+    <!-- ------------------------------------------------------------------- -->
+    <main id="stage-special-select" class="hidden flex-1 flex-col items-center justify-center my-2">
+      <div class="text-center mb-7 max-w-2xl">
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-[#B48A3E]/15 via-[#D4AF37]/20 to-[#B48A3E]/15 border border-[#B48A3E]/30 text-[#9A7228] text-xs font-semibold tracking-widest mb-3 shadow-2xs">
+          <i data-lucide="crown" class="w-4 h-4"></i>
+          <span>SPECIAL SELECTION</span>
+        </div>
+        <h2 class="text-2xl lg:text-[32px] font-semibold tracking-tight text-[#1D1D1F]">
+          特別抽選枠：お好きなセットを1つお選びください
+        </h2>
+        <p class="text-xs lg:text-sm text-[#86868B] mt-2">
+          現在残っているラインナップの中から、ご希望のセットを自由に選択できます
+        </p>
+      </div>
+
+      <div id="special-sets-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-6xl max-h-[60vh] overflow-y-auto p-2">
+        <!-- JSで未当選セットカードを描画 -->
+      </div>
+    </main>
+
+    <!-- ------------------------------------------------------------------- -->
+    <!-- C. 抽選結果 ＆ QRコードモーフィング表示ステージ                      -->
+    <!-- ------------------------------------------------------------------- -->
+    <main id="stage-result" class="hidden flex-1 flex-col items-center justify-between my-2">
+      <!-- 結果ヘッダー（セット名と極小の次へ進むアイコンボタンのみ） -->
+      <div class="w-full max-w-6xl flex items-center justify-between gap-4 bg-white/85 backdrop-blur-md rounded-2xl px-6 py-4 border border-black/[0.05] shadow-2xs">
+        <div class="flex items-center gap-3 min-w-0">
+          <span id="result-badge" class="w-2.5 h-2.5 rounded-full bg-[#0071E3] shrink-0"></span>
+          <h2 id="result-set-title" class="text-xl lg:text-2xl font-semibold tracking-tight text-[#1D1D1F] truncate"></h2>
+        </div>
+
+        <!-- チェックマーク付き進行ボタン -->
+        <button id="next-round-btn" onclick="handleAdminNextRound()" aria-label="次へ" class="apple-pill-btn w-11 h-11 rounded-full bg-[#F5F5F7] hover:bg-gray-200/80 text-[#1D1D1F] flex items-center justify-center shrink-0 transition-all duration-300">
+          <i id="next-round-icon" data-lucide="chevron-right" class="w-5 h-5 text-[#1D1D1F]"></i>
+        </button>
+      </div>
+
+      <!-- 当選アイテム一覧（アイテム画像 → 中央吸い込み＆外周から白黒カタカタQR組み立てアニメーション） -->
+      <div id="result-items-grid" class="w-full flex-1 flex items-center justify-center my-4">
+        <div id="result-cards-wrapper" class="grid gap-5 w-full max-w-6xl justify-center">
+          <!-- JSでモーフィングCanvasカードを描画 -->
+        </div>
+      </div>
+
+      <!-- 下部スペーサー -->
+      <div class="h-2"></div>
+    </main>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- QRコード拡大フォーカスオーバーレイ                                    -->
+  <!-- ===================================================================== -->
+  <div id="qr-focus-overlay" onclick="closeQrFocus(event)" class="fixed inset-0 z-[70] flex items-center justify-center p-6">
+    <div id="qr-focus-card" onclick="closeQrFocus(event, true)" class="apple-card p-8 max-w-sm w-full flex flex-col items-center text-center shadow-[0_28px_70px_rgba(0,0,0,0.18)] cursor-pointer">
+      <div id="qr-focus-canvas-container" class="bg-white p-4 rounded-3xl border border-black/[0.05] shadow-inner mb-5 flex items-center justify-center"></div>
+      <h3 id="qr-focus-item-name" class="text-xl font-semibold tracking-tight text-[#1D1D1F]"></h3>
+      <p id="qr-focus-expiry" class="text-xs text-[#86868B] mt-1.5"></p>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 2. 管理者認証オーバーレイ（完全空白スワイプ画面 → 自動解除）          -->
+  <!-- ===================================================================== -->
+  <div id="auth-modal" class="fixed inset-0 z-[80] flex items-center justify-center touch-none">
+    <div id="auth-swipe-mode" class="w-full h-full relative">
+      <button onclick="closeAuthModal()" aria-label="閉じる" class="absolute top-6 right-6 w-12 h-12 rounded-full flex items-center justify-center text-black/15 hover:text-black/40 transition-colors">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <div id="auth-pin-mode" class="hidden apple-card max-w-xs w-full p-7 fade-scale-in relative">
+      <button onclick="closeAuthModal()" aria-label="閉じる" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#F5F5F7] flex items-center justify-center text-[#86868B] hover:text-[#1D1D1F]">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+
+      <div class="mt-4 mb-5">
+        <input id="pin-display-input" type="password" readonly class="w-full text-center text-2xl tracking-[0.5em] font-semibold py-3 rounded-2xl bg-[#F5F5F7] border border-black/5 focus:outline-none">
+      </div>
+
+      <div class="grid grid-cols-3 gap-2.5">
+        <button onclick="appendPinDigit('1')" class="apple-pill-btn h-14 rounded-2xl bg-[#F5F5F7] hover:bg-gray-200 text-lg font-semibold">1</button>
+        <button onclick="appendPinDigit('2')" class="apple-pill-btn h-14 rounded-2xl bg-[#F5F5F7] hover:bg-gray-200 text-lg font-semibold">2</button>
+        <button onclick="appendPinDigit('3')" class="apple-pill-btn h-14 rounded-2xl bg-[#F5F5F7] hover:bg-gray-200 text-lg font-semibold">3</button>
+        <button onclick="appendPinDigit('4')" class="apple-pill-btn h-14 rounded-2xl bg-[#F5F5F7] hover:bg-gray-200 text-lg font-semibold">4</button>
+        <button onclick="appendPinDigit('5')" class="apple-pill-btn h-14 rounded-2xl bg-[#F5F5F7] hover:bg-gray-200 text-lg font-semibold">5</button>
+        <button onclick="appendPinDigit('6')" class="apple-pill-btn h-14 rounded-2xl bg-[#F5F5F7] hover:bg-gray-200 text-lg font-semibold">6</button>
+        <button onclick="appendPinDigit('7')" class="apple-pill-btn h-14 rounded-2xl bg-[#F5F5F7] hover:bg-gray-200 text-lg font-semibold">7</button>
+        <button onclick="appendPinDigit('8')" class="apple-pill-btn h-14 rounded-2xl bg-[#F5F5F7] hover:bg-gray-200 text-lg font-semibold">8</button>
+        <button onclick="appendPinDigit('9')" class="apple-pill-btn h-14 rounded-2xl bg-[#F5F5F7] hover:bg-gray-200 text-lg font-semibold">9</button>
+        <button onclick="clearPinInput()" class="apple-pill-btn h-14 rounded-2xl bg-[#F5F5F7] hover:bg-gray-200 flex items-center justify-center text-[#86868B]">
+          <i data-lucide="delete" class="w-5 h-5"></i>
+        </button>
+        <button onclick="appendPinDigit('0')" class="apple-pill-btn h-14 rounded-2xl bg-[#F5F5F7] hover:bg-gray-200 text-lg font-semibold">0</button>
+        <button onclick="submitPinCode()" class="apple-pill-btn h-14 rounded-2xl bg-[#0071E3] text-white flex items-center justify-center hover:bg-[#0077ED]">
+          <i data-lucide="check" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 3. 管理画面ダッシュボード                                            -->
+  <!-- ===================================================================== -->
+  <div id="admin-view" class="hidden flex-1 flex-col min-h-screen bg-[#F5F5F7]">
+    <header class="bg-white/90 backdrop-blur-md border-b border-black/5 px-6 py-4 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-30">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-[#1D1D1F] text-white flex items-center justify-center">
+          <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h1 class="text-base font-semibold text-[#1D1D1F]">管理コンソール</h1>
+          <p class="text-[11px] text-[#86868B]">すべての変更はiPad本体（IndexedDB）へ自動保存されます</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <button onclick="startSimulationMode()" class="apple-pill-btn px-5 py-2.5 rounded-full bg-[#0071E3] text-white text-xs font-semibold flex items-center gap-2 min-h-[44px] hover:bg-[#0077ED] shadow-sm">
+          <i data-lucide="play-circle" class="w-4 h-4"></i>
+          <span>抽選シミュレーション（非保存）</span>
+        </button>
+
+        <button onclick="exitAdminView()" class="apple-pill-btn px-5 py-2.5 rounded-full bg-[#1D1D1F] text-white text-xs font-semibold flex items-center gap-2 min-h-[44px] hover:bg-black">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          <span>抽選画面へ戻る</span>
+        </button>
+      </div>
+    </header>
+
+    <nav class="bg-white/80 backdrop-blur-md border-b border-black/5 px-6 py-2.5 flex items-center gap-2 overflow-x-auto">
+      <button onclick="switchAdminTab('items')" data-admin-tab="items" class="admin-nav-btn apple-pill-btn px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap min-h-[40px] flex items-center gap-2">
+        <i data-lucide="package" class="w-3.5 h-3.5"></i>
+        <span>アイテム管理</span>
+      </button>
+      <button onclick="switchAdminTab('sets')" data-admin-tab="sets" class="admin-nav-btn apple-pill-btn px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap min-h-[40px] flex items-center gap-2">
+        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+        <span>セット管理</span>
+      </button>
+      <button onclick="switchAdminTab('settings')" data-admin-tab="settings" class="admin-nav-btn apple-pill-btn px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap min-h-[40px] flex items-center gap-2">
+        <i data-lucide="percent" class="w-3.5 h-3.5"></i>
+        <span>抽選設定・シミュレーション</span>
+      </button>
+      <button onclick="switchAdminTab('history')" data-admin-tab="history" class="admin-nav-btn apple-pill-btn px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap min-h-[40px] flex items-center gap-2">
+        <i data-lucide="history" class="w-3.5 h-3.5"></i>
+        <span>当選履歴</span>
+      </button>
+      <button onclick="switchAdminTab('backup')" data-admin-tab="backup" class="admin-nav-btn apple-pill-btn px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap min-h-[40px] flex items-center gap-2">
+        <i data-lucide="database" class="w-3.5 h-3.5"></i>
+        <span>バックアップ・復元</span>
+      </button>
+      <button onclick="switchAdminTab('pwa')" data-admin-tab="pwa" class="admin-nav-btn apple-pill-btn px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap min-h-[40px] flex items-center gap-2">
+        <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+        <span>PWA・オフライン</span>
+      </button>
+      <button onclick="switchAdminTab('security')" data-admin-tab="security" class="admin-nav-btn apple-pill-btn px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap min-h-[40px] flex items-center gap-2">
+        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+        <span>セキュリティ設定</span>
+      </button>
+    </nav>
+
+    <div class="flex-1 p-6 max-w-[1400px] w-full mx-auto">
+
+      <!-- TAB 1: アイテム管理 -->
+      <section id="admin-tab-items" class="admin-section space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div class="lg:col-span-5 apple-card p-6 space-y-5 h-fit">
+            <div class="flex items-center justify-between border-b border-black/5 pb-4">
+              <h2 id="item-form-title" class="text-base font-semibold text-[#1D1D1F]">新規アイテム登録</h2>
+              <div class="flex bg-[#F5F5F7] p-1 rounded-full">
+                <button id="mode-single-btn" onclick="setItemRegisterMode('single')" class="px-3 py-1 rounded-full text-xs font-medium bg-white shadow-sm text-[#1D1D1F]">個別登録</button>
+                <button id="mode-bulk-btn" onclick="setItemRegisterMode('bulk')" class="px-3 py-1 rounded-full text-xs font-medium text-[#86868B]">一括登録</button>
+              </div>
+            </div>
+
+            <input type="hidden" id="edit-item-id" value="">
+
+            <div>
+              <label class="block text-xs font-medium text-[#1D1D1F] mb-2">アイテム画像（QR中央にも表示）</label>
+              <div class="flex items-center gap-4">
+                <div id="item-image-preview-box" class="w-20 h-20 rounded-2xl bg-[#F5F5F7] border border-black/10 flex items-center justify-center overflow-hidden shrink-0">
+                  <i data-lucide="image" class="w-6 h-6 text-[#86868B]"></i>
+                </div>
+                <div class="flex-1 space-y-2">
+                  <label class="apple-pill-btn inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#F5F5F7] hover:bg-gray-200 text-xs font-medium text-[#1D1D1F] cursor-pointer min-h-[40px]">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span>画像をアップロード</span>
+                    <input type="file" id="item-image-file" accept="image/*" class="hidden" onchange="handleItemImageUpload(event)">
+                  </label>
+                  <button type="button" onclick="openImageLibraryModal('item')" class="apple-pill-btn inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-black/10 hover:bg-gray-50 text-xs font-medium text-[#1D1D1F] min-h-[40px]">
+                    <i data-lucide="images" class="w-3.5 h-3.5"></i>
+                    <span>登録済み画像から再利用</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-[#1D1D1F] mb-1.5">アイテム名 <span class="text-red-500">*</span></label>
+              <input type="text" id="item-name-input" placeholder="例：限定デジタルギフトカード" class="w-full px-4 py-2.5 rounded-xl bg-[#F5F5F7] border border-transparent focus:border-black/20 focus:bg-white text-sm focus:outline-none">
+              <div id="bulk-numbering-option" class="hidden mt-2 flex items-center gap-2">
+                <input type="checkbox" id="bulk-auto-number" checked class="rounded">
+                <label for="bulk-auto-number" class="text-xs text-[#86868B]">一括登録時に連番を自動付与する</label>
+              </div>
+            </div>
+
+            <div id="single-link-group">
+              <label class="block text-xs font-medium text-[#1D1D1F] mb-1.5">個別ギフトリンク（QRコード内容）</label>
+              <input type="url" id="item-link-input" placeholder="https://example.com/gift/xxxx" class="w-full px-4 py-2.5 rounded-xl bg-[#F5F5F7] border border-transparent focus:border-black/20 focus:bg-white text-sm focus:outline-none">
+            </div>
+
+            <div id="bulk-links-group" class="hidden">
+              <label class="block text-xs font-medium text-[#1D1D1F] mb-1.5">複数のギフトリンク（1行につき1リンク） <span class="text-red-500">*</span></label>
+              <textarea id="item-bulk-links-input" rows="4" placeholder="https://example.com/gift/001&#10;https://example.com/gift/002" class="w-full px-4 py-2.5 rounded-xl bg-[#F5F5F7] border border-transparent focus:border-black/20 focus:bg-white text-xs font-mono focus:outline-none"></textarea>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-[#F5F5F7] space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-xs font-semibold text-[#1D1D1F] flex items-center gap-1.5">
+                    <i data-lucide="key" class="w-3.5 h-3.5 text-[#B48A3E]"></i>
+                    <span>ルートキーとして設定</span>
+                  </span>
+                  <p class="text-[11px] text-[#86868B]">QRコードの代わりに外部サイトアクセスボタンを表示します</p>
+                </div>
+                <input type="checkbox" id="item-is-rootkey" onchange="toggleRootKeyUrlField()" class="w-5 h-5 accent-[#1D1D1F]">
+              </div>
+
+              <div id="rootkey-custom-url-group" class="hidden pt-2 border-t border-black/5">
+                <label class="block text-[11px] font-medium text-[#1D1D1F] mb-1">個別外部URL</label>
+                <input type="url" id="item-rootkey-url" placeholder="https://external-event-site.example.com" class="w-full px-3.5 py-2 rounded-xl bg-white border border-black/10 text-xs focus:outline-none">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-[#1D1D1F] mb-1.5">有効期限（任意）</label>
+              <input type="date" id="item-expiry-input" class="w-full px-4 py-2.5 rounded-xl bg-[#F5F5F7] text-sm focus:outline-none">
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+              <button type="button" id="cancel-edit-item-btn" onclick="resetItemForm()" class="hidden apple-pill-btn px-4 py-3 rounded-full bg-[#F5F5F7] text-xs font-medium text-[#86868B] min-h-[46px]">
+                キャンセル
+              </button>
+              <button type="button" onclick="saveItemForm()" class="apple-pill-btn flex-1 py-3 rounded-full bg-[#0071E3] text-white text-sm font-semibold hover:bg-[#0077ED] min-h-[46px]">
+                <span id="save-item-btn-label">アイテムを登録する</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="lg:col-span-7 apple-card p-6 flex flex-col">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-black/5 pb-4 mb-4">
+              <div>
+                <h2 class="text-base font-semibold text-[#1D1D1F]">登録済みアイテム一覧</h2>
+                <p id="items-count-summary" class="text-xs text-[#86868B] mt-0.5"></p>
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                <button onclick="setItemFilter('all')" data-item-filter="all" class="item-filter-btn px-3 py-1.5 rounded-full text-xs font-medium bg-[#1D1D1F] text-white">すべて</button>
+                <button onclick="setItemFilter('unassigned')" data-item-filter="unassigned" class="item-filter-btn px-3 py-1.5 rounded-full text-xs font-medium bg-[#F5F5F7] text-[#86868B]">未所属</button>
+                <button onclick="setItemFilter('assigned')" data-item-filter="assigned" class="item-filter-btn px-3 py-1.5 rounded-full text-xs font-medium bg-[#F5F5F7] text-[#86868B]">セット所属</button>
+                <button onclick="setItemFilter('won')" data-item-filter="won" class="item-filter-btn px-3 py-1.5 rounded-full text-xs font-medium bg-[#F5F5F7] text-[#86868B]">当選済み</button>
+                <button onclick="setItemFilter('rootkey')" data-item-filter="rootkey" class="item-filter-btn px-3 py-1.5 rounded-full text-xs font-medium bg-[#F5F5F7] text-[#86868B]">ルートキー</button>
+              </div>
+            </div>
+
+            <div id="admin-items-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 max-h-[65vh] overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: セット管理 -->
+      <section id="admin-tab-sets" class="admin-section hidden space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div class="lg:col-span-5 apple-card p-6 space-y-5 h-fit">
+            <div class="border-b border-black/5 pb-4">
+              <h2 id="set-form-title" class="text-base font-semibold text-[#1D1D1F]">新規セット作成</h2>
+              <p class="text-xs text-[#86868B] mt-0.5">1つのアイテムは同時に1つのセットにのみ所属できます</p>
+            </div>
+
+            <input type="hidden" id="edit-set-id" value="">
+
+            <div>
+              <label class="block text-xs font-medium text-[#1D1D1F] mb-1.5">セット名 <span class="text-red-500">*</span></label>
+              <input type="text" id="set-name-input" placeholder="例：A賞 プレミアムセット" class="w-full px-4 py-2.5 rounded-xl bg-[#F5F5F7] text-sm focus:bg-white border border-transparent focus:border-black/20 focus:outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-[#1D1D1F] mb-1.5">抽選重み（1以上の整数） <span class="text-red-500">*</span></label>
+              <input type="number" id="set-weight-input" min="1" step="1" value="10" class="w-full px-4 py-2.5 rounded-xl bg-[#F5F5F7] text-sm focus:bg-white border border-transparent focus:border-black/20 focus:outline-none">
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="text-xs font-medium text-[#1D1D1F]">セットに含めるアイテムを選択 <span class="text-red-500">*</span></label>
+                <span id="selected-set-items-count" class="text-xs font-semibold text-[#0071E3]">0個選択中</span>
+              </div>
+              <div id="set-item-selector-list" class="max-h-72 overflow-y-auto space-y-2 p-2 rounded-2xl bg-[#F5F5F7] border border-black/5"></div>
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+              <button type="button" id="cancel-edit-set-btn" onclick="resetSetForm()" class="hidden apple-pill-btn px-4 py-3 rounded-full bg-[#F5F5F7] text-xs font-medium text-[#86868B] min-h-[46px]">
+                キャンセル
+              </button>
+              <button type="button" onclick="saveSetForm()" class="apple-pill-btn flex-1 py-3 rounded-full bg-[#0071E3] text-white text-sm font-semibold hover:bg-[#0077ED] min-h-[46px]">
+                <span id="save-set-btn-label">セットを作成する</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="lg:col-span-7 space-y-6">
+            <div class="apple-card p-6">
+              <div class="flex items-center justify-between border-b border-black/5 pb-4 mb-4">
+                <div>
+                  <h2 class="text-base font-semibold text-[#1D1D1F]">未当選セット（現在の抽選対象）</h2>
+                  <p class="text-xs text-[#86868B] mt-0.5">抽選画面で抽選されるアクティブなセット一覧</p>
+                </div>
+                <span id="active-sets-badge" class="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 text-xs font-semibold">0件</span>
+              </div>
+              <div id="admin-active-sets-list" class="space-y-3"></div>
+            </div>
+
+            <div class="apple-card p-6">
+              <div class="flex items-center justify-between border-b border-black/5 pb-4 mb-4">
+                <div>
+                  <h2 class="text-base font-semibold text-[#1D1D1F]">当選済みセット</h2>
+                  <p class="text-xs text-[#86868B] mt-0.5">復元するとセットと中のアイテムが再び抽選対象に戻ります</p>
+                </div>
+                <button onclick="restoreAllWonSets()" class="apple-pill-btn px-4 py-2 rounded-full bg-[#F5F5F7] hover:bg-gray-200 text-xs font-medium text-[#1D1D1F] min-h-[38px]">
+                  すべて未当選に復元
+                </button>
+              </div>
+              <div id="admin-won-sets-list" class="space-y-3"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: 抽選設定 -->
+      <section id="admin-tab-settings" class="admin-section hidden space-y-6">
+        <div class="apple-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-[#0071E3]/20 bg-gradient-to-r from-white to-[#0071E3]/[0.03]">
+          <div class="space-y-1">
+            <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0071E3]">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+              <span>本番そのまま抽選シミュレーション（データ非保存）</span>
+            </div>
+            <p class="text-xs text-[#86868B] leading-relaxed">
+              現在の確率設定・特別枠・ルートキー・演出アニメーションを本番とまったく同じ画面でテストできます。
+            </p>
+          </div>
+          <button onclick="startSimulationMode()" class="apple-blue-cta px-6 py-3.5 rounded-full text-xs font-semibold flex items-center gap-2 shrink-0 min-h-[46px]">
+            <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+            <span>シミュレーションを開始</span>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div class="lg:col-span-5 space-y-6">
+            <div class="apple-card p-6 space-y-4">
+              <div class="flex items-center justify-between border-b border-black/5 pb-3">
+                <div>
+                  <h2 class="text-base font-semibold text-[#1D1D1F]">特別抽選枠（好きなセットを選べる）</h2>
+                  <p class="text-xs text-[#86868B]">当選時に参加者が任意の未当選セットを選択可能</p>
+                </div>
+                <input type="checkbox" id="setting-special-enabled" onchange="updateSpecialSettings()" class="w-5 h-5 accent-[#0071E3]">
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-[#1D1D1F] mb-1.5">特別枠の重み（1以上の整数）</label>
+                <input type="number" id="setting-special-weight" min="1" step="1" onchange="updateSpecialSettings()" class="w-full px-4 py-2.5 rounded-xl bg-[#F5F5F7] text-sm focus:bg-white border border-transparent focus:border-black/20 focus:outline-none">
+                <p id="special-prob-preview" class="text-xs font-medium text-[#B48A3E] mt-2"></p>
+              </div>
+
+              <!-- 特別抽選枠当選時の3リール演出画像設定 -->
+              <div class="pt-3 border-t border-black/5 space-y-3">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span class="text-xs font-semibold text-[#1D1D1F] flex items-center gap-1.5">
+                      <i data-lucide="crown" class="w-3.5 h-3.5 text-[#B48A3E]"></i>
+                      <span>特別抽選枠の演出用画像（3枠分）</span>
+                    </span>
+                    <p class="text-[11px] text-[#86868B] mt-0.5">特別枠に当選した際、スロット3枠に揃う画像を個別に設定できます</p>
+                  </div>
+                  <button type="button" onclick="resetSpecialReelImages()" class="text-[11px] font-medium text-[#86868B] hover:text-[#1D1D1F] underline">
+                    初期画像に戻す
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2.5">
+                  <!-- 1枠目 -->
+                  <div class="p-2.5 rounded-2xl bg-[#F5F5F7] border border-black/5 flex flex-col items-center text-center gap-2">
+                    <span class="text-[10px] font-semibold text-[#86868B]">1枠目</span>
+                    <div id="special-reel-preview-0" class="w-16 h-16 rounded-xl overflow-hidden bg-white border border-black/10 shadow-2xs flex items-center justify-center"></div>
+                    <div class="flex flex-col gap-1 w-full">
+                      <label class="apple-pill-btn w-full py-1.5 rounded-lg bg-white hover:bg-gray-50 border border-black/10 text-[10px] font-medium text-[#1D1D1F] cursor-pointer">
+                        変更
+                        <input type="file" accept="image/*" class="hidden" onchange="handleSpecialReelImageUpload(event, 0)">
+                      </label>
+                      <button type="button" onclick="openImageLibraryModal('special-0')" class="apple-pill-btn w-full py-1 rounded-lg bg-transparent hover:bg-black/5 text-[10px] text-[#86868B]">
+                        履歴画像
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 2枠目 -->
+                  <div class="p-2.5 rounded-2xl bg-[#F5F5F7] border border-black/5 flex flex-col items-center text-center gap-2">
+                    <span class="text-[10px] font-semibold text-[#86868B]">2枠目</span>
+                    <div id="special-reel-preview-1" class="w-16 h-16 rounded-xl overflow-hidden bg-white border border-black/10 shadow-2xs flex items-center justify-center"></div>
+                    <div class="flex flex-col gap-1 w-full">
+                      <label class="apple-pill-btn w-full py-1.5 rounded-lg bg-white hover:bg-gray-50 border border-black/10 text-[10px] font-medium text-[#1D1D1F] cursor-pointer">
+                        変更
+                        <input type="file" accept="image/*" class="hidden" onchange="handleSpecialReelImageUpload(event, 1)">
+                      </label>
+                      <button type="button" onclick="openImageLibraryModal('special-1')" class="apple-pill-btn w-full py-1 rounded-lg bg-transparent hover:bg-black/5 text-[10px] text-[#86868B]">
+                        履歴画像
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- 3枠目 -->
+                  <div class="p-2.5 rounded-2xl bg-[#F5F5F7] border border-black/5 flex flex-col items-center text-center gap-2">
+                    <span class="text-[10px] font-semibold text-[#86868B]">3枠目</span>
+                    <div id="special-reel-preview-2" class="w-16 h-16 rounded-xl overflow-hidden bg-white border border-black/10 shadow-2xs flex items-center justify-center"></div>
+                    <div class="flex flex-col gap-1 w-full">
+                      <label class="apple-pill-btn w-full py-1.5 rounded-lg bg-white hover:bg-gray-50 border border-black/10 text-[10px] font-medium text-[#1D1D1F] cursor-pointer">
+                        変更
+                        <input type="file" accept="image/*" class="hidden" onchange="handleSpecialReelImageUpload(event, 2)">
+                      </label>
+                      <button type="button" onclick="openImageLibraryModal('special-2')" class="apple-pill-btn w-full py-1 rounded-lg bg-transparent hover:bg-black/5 text-[10px] text-[#86868B]">
+                        履歴画像
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="apple-card p-6 space-y-4">
+              <div class="border-b border-black/5 pb-3">
+                <h2 class="text-base font-semibold text-[#1D1D1F]">ルートキー共通外部URL</h2>
+                <p class="text-xs text-[#86868B]">個別URLが未設定のルートキーアイテムが参照する遷移先</p>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-[#1D1D1F] mb-1.5">デフォルト外部サイトURL</label>
+                <input type="url" id="setting-rootkey-default-url" placeholder="https://example.com/special-portal" class="w-full px-4 py-2.5 rounded-xl bg-[#F5F5F7] text-sm focus:bg-white border border-transparent focus:border-black/20 focus:outline-none">
+              </div>
+              <button onclick="saveRootKeyDefaultUrl()" class="apple-pill-btn w-full py-2.5 rounded-full bg-[#1D1D1F] text-white text-xs font-semibold hover:bg-black min-h-[42px]">
+                ルートキーURLを保存
+              </button>
+            </div>
+          </div>
+
+          <div class="lg:col-span-7 apple-card p-6">
+            <div class="flex items-center justify-between border-b border-black/5 pb-4 mb-4">
+              <div>
+                <h2 class="text-base font-semibold text-[#1D1D1F]">抽選確率リアルタイム計算表</h2>
+                <p class="text-xs text-[#86868B]">計算式：各重み ÷ 全有効重みの合計 × 100</p>
+              </div>
+              <div id="total-weight-badge" class="px-3.5 py-1.5 rounded-full bg-[#F5F5F7] text-xs font-semibold text-[#1D1D1F]">
+                合計重み: 0
+              </div>
+            </div>
+
+            <div id="probability-table-container" class="space-y-3"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: 当選履歴 -->
+      <section id="admin-tab-history" class="admin-section hidden">
+        <div class="apple-card p-6">
+          <div class="flex flex-wrap items-center justify-between gap-4 border-b border-black/5 pb-4 mb-5">
+            <div>
+              <h2 class="text-base font-semibold text-[#1D1D1F]">当選履歴ログ</h2>
+              <p class="text-xs text-[#86868B]">イベント中に確定したすべての抽選結果記録</p>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <button onclick="exportHistoryCsv()" class="apple-pill-btn px-4 py-2 rounded-full bg-[#F5F5F7] hover:bg-gray-200 text-xs font-medium text-[#1D1D1F] flex items-center gap-1.5 min-h-[40px]">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>CSV書き出し</span>
+              </button>
+              <button onclick="confirmClearHistory()" class="apple-pill-btn px-4 py-2 rounded-full bg-red-50 hover:bg-red-100 text-xs font-medium text-red-600 flex items-center gap-1.5 min-h-[40px]">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>履歴クリア</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="history-list-container" class="space-y-3 max-h-[65vh] overflow-y-auto"></div>
+        </div>
+      </section>
+
+      <!-- TAB 5: バックアップ・復元 -->
+      <section id="admin-tab-backup" class="admin-section hidden space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="apple-card p-6 space-y-4">
+            <div class="w-11 h-11 rounded-2xl bg-[#F5F5F7] flex items-center justify-center text-[#1D1D1F]">
+              <i data-lucide="download-cloud" class="w-5 h-5"></i>
+            </div>
+            <h2 class="text-base font-semibold text-[#1D1D1F]">バックアップデータの書き出し</h2>
+            <p class="text-xs text-[#86868B] leading-relaxed">
+              登録済みの全アイテム、セット構成、確率設定、当選履歴、セキュリティ設定を1つのJSONファイルとして保存します。
+            </p>
+            <button onclick="exportFullBackup()" class="apple-pill-btn w-full py-3.5 rounded-full bg-[#1D1D1F] text-white text-sm font-semibold hover:bg-black min-h-[48px]">
+              バックアップファイルを書き出す（JSON）
+            </button>
+          </div>
+
+          <div class="apple-card p-6 space-y-4">
+            <div class="w-11 h-11 rounded-2xl bg-[#F5F5F7] flex items-center justify-center text-[#1D1D1F]">
+              <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+            </div>
+            <h2 class="text-base font-semibold text-[#1D1D1F]">バックアップからの復元</h2>
+            <p class="text-xs text-[#86868B] leading-relaxed">
+              書き出したバックアップJSONファイルを読み込み、当時の状態へ復元します。
+            </p>
+            <label class="apple-pill-btn w-full py-3.5 rounded-full bg-[#F5F5F7] hover:bg-gray-200 text-[#1D1D1F] text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer min-h-[48px]">
+              <i data-lucide="folder-open" class="w-4 h-4"></i>
+              <span>バックアップファイルを選択して復元</span>
+              <input type="file" id="restore-backup-input" accept=".json,application/json" class="hidden" onchange="handleRestoreFileSelect(event)">
+            </label>
+          </div>
+        </div>
+
+        <div class="apple-card p-6 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h3 class="text-sm font-semibold text-[#1D1D1F]">テスト運用・データリセットツール</h3>
+            <p class="text-xs text-[#86868B] mt-0.5">動作確認用のサンプルアイテム・セットの投入や全データ初期化を行えます</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button onclick="confirmLoadSampleData()" class="apple-pill-btn px-5 py-2.5 rounded-full bg-[#F5F5F7] hover:bg-gray-200 text-xs font-semibold text-[#1D1D1F] min-h-[44px]">
+              サンプルデータを投入
+            </button>
+            <button onclick="confirmFactoryReset()" class="apple-pill-btn px-5 py-2.5 rounded-full bg-red-50 hover:bg-red-100 text-xs font-semibold text-red-600 min-h-[44px]">
+              全データを初期化
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: PWA・オフライン -->
+      <section id="admin-tab-pwa" class="admin-section hidden space-y-6">
+        <div class="apple-card p-6 space-y-5">
+          <div class="flex items-center justify-between border-b border-black/5 pb-4">
+            <div>
+              <h2 class="text-base font-semibold text-[#1D1D1F]">PWA・オフライン動作ステータス</h2>
+              <p class="text-xs text-[#86868B] mt-0.5">Safariの「ホーム画面に追加」でフルスクリーンアプリとして起動できます</p>
+            </div>
+            <span id="pwa-status-badge" class="px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-700 text-xs font-semibold">
+              IndexedDB 永続化アクティブ
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div class="p-4 rounded-2xl bg-[#F5F5F7]">
+              <span class="text-[#86868B] block mb-1">ネットワーク状態</span>
+              <span id="pwa-net-detail" class="text-sm font-semibold text-[#1D1D1F]">確認中...</span>
+            </div>
+            <div class="p-4 rounded-2xl bg-[#F5F5F7]">
+              <span class="text-[#86868B] block mb-1">登録アイテム / セット数</span>
+              <span id="pwa-data-counts" class="text-sm font-semibold text-[#1D1D1F]">0 アイテム / 0 セット</span>
+            </div>
+            <div class="p-4 rounded-2xl bg-[#F5F5F7]">
+              <span class="text-[#86868B] block mb-1">アプリアイコン設定</span>
+              <span class="text-sm font-semibold text-[#1D1D1F]">/app-icon.png (512×512)</span>
+            </div>
+          </div>
+
+          <div class="border-t border-black/5 pt-5">
+            <h3 class="text-sm font-semibold text-[#1D1D1F] mb-2">Webサーバー配置用 PWAファイル一式の書き出し</h3>
+            <div class="flex flex-wrap gap-3">
+              <button onclick="downloadManifestJson()" class="apple-pill-btn px-5 py-2.5 rounded-full bg-[#F5F5F7] hover:bg-gray-200 text-xs font-semibold text-[#1D1D1F] flex items-center gap-2 min-h-[44px]">
+                <i data-lucide="file-code" class="w-4 h-4"></i>
+                <span>manifest.json をダウンロード</span>
+              </button>
+              <button onclick="downloadServiceWorkerJs()" class="apple-pill-btn px-5 py-2.5 rounded-full bg-[#F5F5F7] hover:bg-gray-200 text-xs font-semibold text-[#1D1D1F] flex items-center gap-2 min-h-[44px]">
+                <i data-lucide="cpu" class="w-4 h-4"></i>
+                <span>service-worker.js をダウンロード</span>
+              </button>
+              <button onclick="downloadPlaceholderAppIcon()" class="apple-pill-btn px-5 py-2.5 rounded-full bg-[#F5F5F7] hover:bg-gray-200 text-xs font-semibold text-[#1D1D1F] flex items-center gap-2 min-h-[44px]">
+                <i data-lucide="image" class="w-4 h-4"></i>
+                <span>app-icon.png (512×512) を生成ダウンロード</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 7: セキュリティ設定 -->
+      <section id="admin-tab-security" class="admin-section hidden space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="apple-card p-6 space-y-4">
+            <h2 class="text-base font-semibold text-[#1D1D1F]">スワイプコマンドの変更</h2>
+            <p class="text-xs text-[#86868B]">
+              管理画面ロック解除時のスワイプ順序を変更します（初期設定：上・上・右・左・下）。
+            </p>
+
+            <div class="p-4 rounded-2xl bg-[#F5F5F7] text-center">
+              <span class="text-xs text-[#86868B] block mb-2">新しいコマンドシーケンス</span>
+              <div id="new-swipe-sequence-display" class="min-h-[36px] flex items-center justify-center gap-2 flex-wrap font-semibold text-sm text-[#1D1D1F]">
+                <span class="text-xs text-[#86868B]">下のボタンで方向を入力してください</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-2">
+              <button type="button" onclick="addNewSwipeStep('UP')" class="apple-pill-btn py-3 rounded-xl bg-[#F5F5F7] hover:bg-gray-200 font-semibold text-sm">↑ 上</button>
+              <button type="button" onclick="addNewSwipeStep('DOWN')" class="apple-pill-btn py-3 rounded-xl bg-[#F5F5F7] hover:bg-gray-200 font-semibold text-sm">↓ 下</button>
+              <button type="button" onclick="addNewSwipeStep('LEFT')" class="apple-pill-btn py-3 rounded-xl bg-[#F5F5F7] hover:bg-gray-200 font-semibold text-sm">← 左</button>
+              <button type="button" onclick="addNewSwipeStep('RIGHT')" class="apple-pill-btn py-3 rounded-xl bg-[#F5F5F7] hover:bg-gray-200 font-semibold text-sm">→ 右</button>
+            </div>
+
+            <div class="flex items-center gap-2 pt-2">
+              <button type="button" onclick="clearNewSwipeSequence()" class="apple-pill-btn px-4 py-2.5 rounded-full bg-[#F5F5F7] text-xs font-medium text-[#86868B] min-h-[44px]">
+                クリア
+              </button>
+              <button type="button" onclick="saveNewSwipeCommand()" class="apple-pill-btn flex-1 py-2.5 rounded-full bg-[#0071E3] text-white text-xs font-semibold hover:bg-[#0077ED] min-h-[44px]">
+                新しいスワイプコマンドを保存
+              </button>
+            </div>
+          </div>
+
+          <div class="apple-card p-6 space-y-4">
+            <h2 class="text-base font-semibold text-[#1D1D1F]">数字パスコードの変更</h2>
+            <p class="text-xs text-[#86868B]">
+              スワイプ入力が一致しなかった際に切り替わるバックアップ用数字パスコードを変更します（初期設定：0000）。
+            </p>
+
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-medium text-[#1D1D1F] mb-1">新しい数字パスコード（4桁以上）</label>
+                <input type="password" id="new-pin-input" inputmode="numeric" pattern="[0-9]*" placeholder="例：1234" class="w-full px-4 py-2.5 rounded-xl bg-[#F5F5F7] text-sm focus:bg-white border border-transparent focus:border-black/20 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-[#1D1D1F] mb-1">確認のため再入力</label>
+                <input type="password" id="new-pin-confirm-input" inputmode="numeric" pattern="[0-9]*" placeholder="同じ数字を再入力" class="w-full px-4 py-2.5 rounded-xl bg-[#F5F5F7] text-sm focus:bg-white border border-transparent focus:border-black/20 focus:outline-none">
+              </div>
+            </div>
+
+            <button type="button" onclick="saveNewPinCode()" class="apple-pill-btn w-full py-3 rounded-full bg-[#1D1D1F] text-white text-sm font-semibold hover:bg-black min-h-[46px] mt-2">
+              新しい数字パスコードを保存
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- 登録済み画像再利用ピッカーモーダル -->
+  <div id="image-library-modal" class="fixed inset-0 z-[85] hidden items-center justify-center bg-black/40 backdrop-blur-sm p-6">
+    <div class="apple-card max-w-2xl w-full p-6 fade-scale-in flex flex-col max-h-[80vh]">
+      <div class="flex items-center justify-between border-b border-black/5 pb-3 mb-4">
+        <h3 class="text-base font-semibold text-[#1D1D1F]">登録済み画像から選択</h3>
+        <button onclick="closeImageLibraryModal()" class="w-9 h-9 rounded-full bg-[#F5F5F7] flex items-center justify-center text-[#86868B] hover:text-[#1D1D1F]">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div id="image-library-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-3 overflow-y-auto p-1"></div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- アプリケーションロジック                                              -->
+  <!-- ===================================================================== -->
+  <script>
+    const DB_NAME = 'EventLotteryDB';
+    const DB_VERSION = 1;
+    let db = null;
+
+    let prodState = {
+      items: [],
+      sets: [],
+      history: [],
+      settings: {
+        specialEnabled: true,
+        specialWeight: 1,
+        specialReelImages: ['', '', ''],
+        rootKeyDefaultUrl: 'https://example.com/special-reward',
+        soundEnabled: true
+      },
+      security: {
+        salt: '',
+        swipeHash: '',
+        pinHash: ''
+      }
+    };
+
+    let isSimulationMode = false;
+    let simState = null;
+
+    function getActiveState() {
+      return isSimulationMode && simState ? simState : prodState;
+    }
+
+    let isDrawing = false;
+    let currentResultSet = null;
+    let adminNextConfirmStep = false;
+    let adminNextResetTimer = null;
+    let activeResultRenderToken = 0;
+
+    // 待機中アイドル回転アニメーション管理
+    let idleSpinRafId = null;
+    let idleSpinActive = false;
+
+    let currentUploadedImage = '';
+    let itemRegisterMode = 'single';
+    let currentItemFilter = 'all';
+    let newSwipeSequenceBuffer = [];
+    let imageLibraryTarget = 'item'; // 'item' | 'special-0' | 'special-1' | 'special-2'
+
+    let swipeInputBuffer = [];
+    let totalSwipeStrokesInSession = 0;
+    let pinInputBuffer = '';
+
+    async function sha256WithSalt(rawString, salt) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(`${salt}::${rawString}`);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function generateRandomSalt() {
+      const arr = new Uint8Array(16);
+      crypto.getRandomValues(arr);
+      return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function ensureDefaultSecurity() {
+      if (!prodState.security || !prodState.security.salt || !prodState.security.swipeHash || !prodState.security.pinHash) {
+        const salt = generateRandomSalt();
+        const defaultSwipe = ['UP', 'UP', 'RIGHT', 'LEFT', 'DOWN'].join('-');
+        const defaultPin = '0000';
+        prodState.security = {
+          salt,
+          swipeHash: await sha256WithSalt(defaultSwipe, salt),
+          pinHash: await sha256WithSalt(defaultPin, salt)
+        };
+        await saveStoreKey('security', prodState.security);
+      }
+    }
+
+    function initIndexedDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (event) => {
+          const database = event.target.result;
+          if (!database.objectStoreNames.contains('kv_store')) {
+            database.createObjectStore('kv_store', { keyPath: 'key' });
+          }
+        };
+        request.onsuccess = (event) => {
+          db = event.target.result;
+          resolve(db);
+        };
+        request.onerror = (event) => reject(event.target.error);
+      });
+    }
+
+    function loadStoreKey(key) {
+      return new Promise((resolve, reject) => {
+        if (!db) return resolve(null);
+        const tx = db.transaction('kv_store', 'readonly');
+        const store = tx.objectStore('kv_store');
+        const req = store.get(key);
+        req.onsuccess = () => resolve(req.result ? req.result.value : null);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function saveStoreKey(key, value) {
+      if (isSimulationMode) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        if (!db) return resolve();
+        const tx = db.transaction('kv_store', 'readwrite');
+        const store = tx.objectStore('kv_store');
+        const req = store.put({ key, value });
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function loadAllAppData() {
+      const items = await loadStoreKey('items');
+      const sets = await loadStoreKey('sets');
+      const history = await loadStoreKey('history');
+      const settings = await loadStoreKey('settings');
+      const security = await loadStoreKey('security');
+
+      if (Array.isArray(items)) prodState.items = items;
+      if (Array.isArray(sets)) prodState.sets = sets;
+      if (Array.isArray(history)) prodState.history = history;
+      if (settings) {
+        prodState.settings = {
+          ...prodState.settings,
+          ...settings,
+          specialReelImages: Array.isArray(settings.specialReelImages) && settings.specialReelImages.length === 3
+            ? settings.specialReelImages
+            : ['', '', '']
+        };
+      }
+      if (security) prodState.security = security;
+
+      await ensureDefaultSecurity();
+
+      const initializedFlag = await loadStoreKey('initialized');
+      if (!initializedFlag && prodState.items.length === 0 && prodState.sets.length === 0) {
+        await injectSampleData(true);
+        await saveStoreKey('initialized', true);
+      }
+    }
+
+    async function persistAllState() {
+      if (isSimulationMode) return;
+      await Promise.all([
+        saveStoreKey('items', prodState.items),
+        saveStoreKey('sets', prodState.sets),
+        saveStoreKey('history', prodState.history),
+        saveStoreKey('settings', prodState.settings),
+        saveStoreKey('security', prodState.security)
+      ]);
+    }
+
+    function startSimulationMode() {
+      simState = JSON.parse(JSON.stringify(prodState));
+      isSimulationMode = true;
+      currentResultSet = null;
+      isDrawing = false;
+      activeResultRenderToken++;
+
+      document.getElementById('admin-view').classList.add('hidden');
+      document.getElementById('admin-view').classList.remove('flex');
+      document.getElementById('participant-view').classList.remove('hidden');
+
+      document.getElementById('stage-result').classList.add('hidden');
+      document.getElementById('stage-special-select').classList.add('hidden');
+      const drawStage = document.getElementById('stage-draw');
+      drawStage.classList.remove('hidden');
+      drawStage.classList.add('stage-transition-in');
+
+      resetSlotFrameAppearance();
+
+      const slot = document.getElementById('simulation-exit-slot');
+      if (slot) {
+        slot.innerHTML = `
+          <button onclick="exitSimulationMode()" class="apple-pill-btn px-3.5 py-1.5 rounded-full bg-[#0071E3]/10 border border-[#0071E3]/25 text-[#0071E3] text-xs font-semibold flex items-center gap-1.5 hover:bg-[#0071E3]/15">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#0071E3] animate-pulse"></span>
+            <span>シミュレーション終了</span>
+          </button>
+        `;
+      }
+      updateDrawScreenAvailability();
+    }
+
+    function exitSimulationMode() {
+      stopIdleReelLoop();
+      isSimulationMode = false;
+      simState = null;
+      currentResultSet = null;
+      isDrawing = false;
+      activeResultRenderToken++;
+
+      const slot = document.getElementById('simulation-exit-slot');
+      if (slot) slot.innerHTML = '';
+
+      document.getElementById('stage-result').classList.add('hidden');
+      document.getElementById('stage-special-select').classList.add('hidden');
+      document.getElementById('stage-draw').classList.remove('hidden');
+
+      enterAdminView();
+      showToast('シミュレーションを終了しました');
+    }
+
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) audioCtx = new AudioContextClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function playTone(freq, type = 'sine', duration = 0.08, volume = 0.08) {
+      const state = getActiveState();
+      if (!state.settings.soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(volume, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function playReelStopSound(index) {
+      const baseFreqs = [523.25, 659.25, 783.99, 1046.50, 1174.66];
+      playTone(baseFreqs[index % baseFreqs.length], 'triangle', 0.14, 0.1);
+    }
+
+    function playExtraSlotSurpriseSound() {
+      // 「え？…！」となる予兆＆ポップ出現サウンド
+      playTone(440, 'sine', 0.18, 0.07);
+      setTimeout(() => playTone(659.25, 'triangle', 0.22, 0.09), 140);
+      setTimeout(() => playTone(987.77, 'sine', 0.32, 0.1), 260);
+    }
+
+    function playWinChime(isSpecial = false) {
+      const state = getActiveState();
+      if (!state.settings.soundEnabled) return;
+      const notes = isSpecial
+        ? [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98]
+        : [587.33, 739.99, 880.0, 1174.66];
+      notes.forEach((n, idx) => setTimeout(() => playTone(n, 'sine', 0.38, 0.11), idx * 90));
+    }
+
+    function playMorphAssembleSound() {
+      playTone(880, 'sine', 0.28, 0.05);
+      setTimeout(() => playTone(1174.66, 'sine', 0.35, 0.045), 110);
+    }
+
+    function toggleSoundSetting() {
+      const state = getActiveState();
+      state.settings.soundEnabled = !state.settings.soundEnabled;
+      if (!isSimulationMode) saveStoreKey('settings', prodState.settings);
+      updateSoundIcon();
+    }
+
+    function updateSoundIcon() {
+      const state = getActiveState();
+      const icon = document.getElementById('sound-icon');
+      if (!icon) return;
+      icon.setAttribute('data-lucide', state.settings.soundEnabled ? 'volume-2' : 'volume-x');
+      lucide.createIcons();
+    }
+
+    function createCleanIconDataUrl(bgHex, fgHex, labelText) {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+        <rect width="240" height="240" rx="52" fill="${bgHex}"/>
+        <circle cx="120" cy="104" r="40" fill="${fgHex}" fill-opacity="0.14"/>
+        <text x="120" y="116" font-family="-apple-system, sans-serif" font-size="34" font-weight="700" fill="${fgHex}" text-anchor="middle">${labelText}</text>
+        <text x="120" y="178" font-family="-apple-system, sans-serif" font-size="15" font-weight="600" fill="${fgHex}" fill-opacity="0.75" text-anchor="middle">ITEM</text>
+      </svg>`;
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+
+    function getDefaultSpecialReelImage(index) {
+      const labels = ['★', 'SP', '★'];
+      return createCleanIconDataUrl('#B48A3E', '#FFFFFF', labels[index % labels.length]);
+    }
+
+    function getSpecialReelImage(state, index) {
+      const customArr = state.settings && Array.isArray(state.settings.specialReelImages)
+        ? state.settings.specialReelImages
+        : ['', '', ''];
+      return customArr[index] || getDefaultSpecialReelImage(index);
+    }
+
+    async function injectSampleData(silent = false) {
+      const imgA = createCleanIconDataUrl('#1D1D1F', '#FFFFFF', 'A');
+      const imgB = createCleanIconDataUrl('#0071E3', '#FFFFFF', 'B');
+      const imgC = createCleanIconDataUrl('#34C759', '#FFFFFF', 'C');
+      const imgD = createCleanIconDataUrl('#AF52DE', '#FFFFFF', 'D');
+      const imgKey = createCleanIconDataUrl('#B48A3E', '#FFFFFF', 'KEY');
+
+      const sampleItems = [
+        { id: 'itm-1', name: 'プレミアムギフト A1', imageDataUrl: imgA, giftLink: 'https://example.com/redeem/a1', setId: 'set-1', isWon: false },
+        { id: 'itm-2', name: 'デジタルチケット A2', imageDataUrl: imgB, giftLink: 'https://example.com/redeem/a2', setId: 'set-1', isWon: false },
+        { id: 'itm-3', name: '限定パス A3', imageDataUrl: imgC, giftLink: 'https://example.com/redeem/a3', setId: 'set-1', isWon: false },
+        { id: 'itm-4', name: 'エクストラ記念品 A4', imageDataUrl: imgD, giftLink: 'https://example.com/redeem/a4', setId: 'set-1', isWon: false },
+
+        { id: 'itm-5', name: 'バウチャー B1', imageDataUrl: imgB, giftLink: 'https://example.com/redeem/b1', setId: 'set-2', isWon: false },
+        { id: 'itm-6', name: 'イベント記念コード B2', imageDataUrl: imgC, giftLink: 'https://example.com/redeem/b2', setId: 'set-2', isWon: false },
+        { id: 'itm-7', name: 'ルートキー（特別会場）', imageDataUrl: imgKey, giftLink: '', isRootKey: true, rootKeyUrl: 'https://example.com/portal', setId: 'set-2', isWon: false }
+      ];
+
+      const sampleSets = [
+        { id: 'set-1', name: '4アイテム入り 豪華デラックスセット', itemIds: ['itm-1', 'itm-2', 'itm-3', 'itm-4'], weight: 7, isWon: false },
+        { id: 'set-2', name: 'ルートキー入り特別セット', itemIds: ['itm-5', 'itm-6', 'itm-7'], weight: 3, isWon: false }
+      ];
+
+      prodState.items = sampleItems;
+      prodState.sets = sampleSets;
+      prodState.history = [];
+      await persistAllState();
+      refreshAllViews();
+      if (!silent) showToast('サンプルデータを投入しました');
+    }
+
+    function getActiveSets() {
+      const state = getActiveState();
+      return state.sets.filter(s => !s.isWon && s.itemIds.length > 0);
+    }
+
+    /**
+     * 登録済み全アイテムから「同じ画像が重複しない」ユニーク画像アイテムリストを作成
+     * （当選済みアイテムも含め、多彩なバリエーションを見せる）
+     */
+    function getDistinctImageItemPool(state) {
+      const allItems = state.items || [];
+      if (allItems.length === 0) {
+        return [{
+          name: 'LOTTERY',
+          imageDataUrl: createCleanIconDataUrl('#F5F5F7', '#1D1D1F', '★')
+        }];
+      }
+
+      const seenImages = new Set();
+      const distinctList = [];
+      const shuffled = [...allItems].sort(() => Math.random() - 0.5);
+
+      for (const item of shuffled) {
+        const key = item.imageDataUrl || item.name;
+        if (!seenImages.has(key)) {
+          seenImages.add(key);
+          distinctList.push(item);
+        }
+      }
+      return distinctList.length > 0 ? distinctList : shuffled;
+    }
+
+    function stopIdleReelLoop() {
+      idleSpinActive = false;
+      if (idleSpinRafId) {
+        cancelAnimationFrame(idleSpinRafId);
+        idleSpinRafId = null;
+      }
+    }
+
+    /**
+     * 待機中（ボタンを押す前）のリール連続スクロール演出
+     * 目で追えるゆったりとしたスピード感で、重複しない様々なアイテム画像が流れる
+     */
+    function startIdleReelLoop(reelCount = 3) {
+      stopIdleReelLoop();
+      const container = document.getElementById('reels-container');
+      if (!container) return;
+
+      const state = getActiveState();
+      const distinctPool = getDistinctImageItemPool(state);
+
+      container.className = 'grid gap-4 lg:gap-6 w-full ';
+      if (reelCount <= 3) container.className += 'grid-cols-3';
+      else if (reelCount === 4) container.className += 'grid-cols-2 sm:grid-cols-4';
+      else container.className += 'grid-cols-3 sm:grid-cols-5';
+
+      container.innerHTML = '';
+      const stripsData = [];
+
+      for (let i = 0; i < reelCount; i++) {
+        const reelDiv = document.createElement('div');
+        reelDiv.className = 'reel-window h-48 lg:h-60 flex flex-col items-center justify-start';
+        reelDiv.id = `slot-reel-${i}`;
+
+        const rotatedPool = [];
+        for (let k = 0; k < distinctPool.length; k++) {
+          rotatedPool.push(distinctPool[(k + i) % distinctPool.length]);
+        }
+        const loopItems = [...rotatedPool, rotatedPool[0]];
+
+        const strip = document.createElement('div');
+        strip.className = 'reel-strip w-full';
+        strip.id = `reel-strip-${i}`;
+
+        reelDiv.innerHTML = `<div class="reel-mask-top"></div><div class="reel-mask-bottom"></div>`;
+        reelDiv.appendChild(strip);
+        container.appendChild(reelDiv);
+
+        const itemHeight = reelDiv.clientHeight || 220;
+        strip.innerHTML = loopItems.map(itm => `
+          <div style="height:${itemHeight}px" class="w-full shrink-0 flex flex-col items-center justify-center text-center px-3">
+            <img src="${itm.imageDataUrl}" alt="" class="w-20 h-20 lg:w-28 lg:h-28 rounded-2xl object-cover shadow-sm mb-2.5 bg-[#F5F5F7]">
+            <span class="text-xs font-medium text-[#86868B] line-clamp-1 px-2">${escapeHtml(itm.name)}</span>
+          </div>
+        `).join('');
+
+        stripsData.push({
+          strip,
+          itemHeight,
+          loopHeight: rotatedPool.length * itemHeight,
+          offset: (i * itemHeight * 0.35) % (rotatedPool.length * itemHeight),
+          speed: 58 + (i % 2) * 8
+        });
+      }
+
+      idleSpinActive = true;
+      let lastTime = performance.now();
+
+      function tick(now) {
+        if (!idleSpinActive || isDrawing) return;
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+
+        for (const s of stripsData) {
+          if (s.loopHeight <= 0) continue;
+          s.offset = (s.offset + s.speed * dt) % s.loopHeight;
+          s.strip.style.transform = `translate3d(0, -${s.offset}px, 0)`;
+        }
+        idleSpinRafId = requestAnimationFrame(tick);
+      }
+
+      idleSpinRafId = requestAnimationFrame(tick);
+    }
+
+    function resetSlotFrameAppearance() {
+      const frame = document.getElementById('slot-machine-frame');
+      const cta = document.getElementById('draw-cta-area');
+      const headline = document.getElementById('draw-headline');
+      const specialBadge = document.getElementById('special-headline-badge');
+      if (frame) {
+        frame.classList.remove('special-drop-out', 'special-reel-glow', 'special-frame-aura', 'frame-suspense-pulse');
+        frame.style.opacity = '';
+        frame.style.transform = '';
+      }
+      if (cta) {
+        cta.style.opacity = '1';
+        cta.style.pointerEvents = 'auto';
+      }
+      if (headline) {
+        headline.classList.remove('text-[#B48A3E]');
+        headline.textContent = 'ボタンを押して抽選を開始してください';
+      }
+      if (specialBadge) {
+        specialBadge.classList.add('hidden');
+      }
+    }
+
+    function updateDrawScreenAvailability() {
+      const state = getActiveState();
+      const activeSets = getActiveSets();
+      const startBtn = document.getElementById('start-draw-btn');
+      const hintEl = document.getElementById('draw-availability-hint');
+      const headline = document.getElementById('draw-headline');
+
+      resetSlotFrameAppearance();
+
+      if (state.sets.length === 0 || activeSets.length === 0) {
+        startBtn.disabled = true;
+        headline.textContent = 'ボタンを押して抽選を開始してください';
+        hintEl.textContent = '獲得可能なセット：残り 0 セット';
+        startIdleReelLoop(3);
+        return;
+      }
+
+      startBtn.disabled = isDrawing;
+      headline.textContent = 'ボタンを押して抽選を開始してください';
+      hintEl.textContent = `獲得可能なセット：残り ${activeSets.length} セット`;
+
+      if (!isDrawing) startIdleReelLoop(3);
+    }
+
+    function decideLotteryOutcome() {
+      const state = getActiveState();
+      const activeSets = getActiveSets();
+      if (activeSets.length === 0) return null;
+
+      const candidates = [];
+      let totalWeight = 0;
+
+      for (const s of activeSets) {
+        const w = Math.max(1, Number(s.weight) || 1);
+        candidates.push({ type: 'normal', set: s, weight: w });
+        totalWeight += w;
+      }
+
+      if (state.settings.specialEnabled && Number(state.settings.specialWeight) > 0) {
+        const sw = Number(state.settings.specialWeight);
+        candidates.push({ type: 'special', set: null, weight: sw });
+        totalWeight += sw;
+      }
+
+      const randArray = new Uint32Array(1);
+      crypto.getRandomValues(randArray);
+      const r = (randArray[0] / (0xFFFFFFFF + 1)) * totalWeight;
+
+      let cumulative = 0;
+      for (const c of candidates) {
+        cumulative += c.weight;
+        if (r < cumulative) return c;
+      }
+      return candidates[candidates.length - 1];
+    }
+
+    async function startLottery() {
+      if (isDrawing) return;
+      const state = getActiveState();
+      const activeSets = getActiveSets();
+      if (activeSets.length === 0) return;
+
+      stopIdleReelLoop();
+      isDrawing = true;
+      const outcome = decideLotteryOutcome();
+      if (!outcome) {
+        isDrawing = false;
+        return;
+      }
+
+      const startBtn = document.getElementById('start-draw-btn');
+      const adminBtn = document.getElementById('open-admin-auth-btn');
+
+      startBtn.disabled = true;
+      adminBtn.disabled = true;
+      adminBtn.classList.add('opacity-30', 'pointer-events-none');
+
+      let targetItems = [];
+      if (outcome.type === 'normal') {
+        targetItems = outcome.set.itemIds.map(id => state.items.find(i => i.id === id)).filter(Boolean);
+      } else {
+        // 管理者画面で設定された特別抽選枠の3つの画像を使用
+        targetItems = [
+          { name: 'SPECIAL SELECTION', imageDataUrl: getSpecialReelImage(state, 0) },
+          { name: 'SPECIAL SELECTION', imageDataUrl: getSpecialReelImage(state, 1) },
+          { name: 'SPECIAL SELECTION', imageDataUrl: getSpecialReelImage(state, 2) }
+        ];
+      }
+
+      // まず3つのリール枠を用意
+      const initialReelCount = Math.min(3, targetItems.length);
+      const container = document.getElementById('reels-container');
+      container.className = 'grid grid-cols-3 gap-4 lg:gap-6 w-full transition-all duration-500';
+      container.innerHTML = '';
+
+      for (let i = 0; i < initialReelCount; i++) {
+        const reelDiv = document.createElement('div');
+        reelDiv.className = 'reel-window h-48 lg:h-60 flex flex-col items-center justify-start';
+        reelDiv.id = `slot-reel-${i}`;
+        reelDiv.innerHTML = `
+          <div class="reel-mask-top"></div>
+          <div class="reel-strip w-full" id="reel-strip-${i}"></div>
+          <div class="reel-mask-bottom"></div>
+        `;
+        container.appendChild(reelDiv);
+      }
+
+      // 回転中のバリエーションに特別枠画像も少し混ぜてワクワク感を出す
+      const distinctPool = getDistinctImageItemPool(state);
+      if (outcome.type === 'special') {
+        targetItems.forEach((spItm, idx) => {
+          if (!distinctPool.some(d => d.imageDataUrl === spItm.imageDataUrl)) {
+            distinctPool.splice(idx % (distinctPool.length + 1), 0, spItm);
+          }
+        });
+      }
+
+      const reelPromises = [];
+
+      for (let i = 0; i < initialReelCount; i++) {
+        // 回転時間を長く調整（1枠目: 2.3秒、2枠目: 3.1秒、3枠目: 3.9秒 / 特別枠の3枠目はさらにじっくり4.45秒）
+        let stopDelay = 2300 + i * 800;
+        if (outcome.type === 'special' && i === 2) {
+          stopDelay = 4450;
+        }
+        const extraCycles = 22 + i * 7 + (outcome.type === 'special' && i === 2 ? 6 : 0);
+
+        const p = animateSingleReel(i, distinctPool, targetItems[i], stopDelay, extraCycles).then(() => {
+          // 特別枠のとき、1枠目・2枠目が止まったらゴールドのリーチ予兆を点灯
+          if (outcome.type === 'special' && i < 2) {
+            const rEl = document.getElementById(`slot-reel-${i}`);
+            if (rEl) rEl.classList.add('special-reach-glow');
+          }
+        });
+        reelPromises.push(p);
+      }
+
+      await Promise.all(reelPromises);
+
+      // 4個目以降のアイテムがある場合：一瞬「え？…！」となる間（タメ）と予兆演出を挟んで追加出現させる
+      if (targetItems.length > 3) {
+        const frame = document.getElementById('slot-machine-frame');
+
+        // 1) まず3つ揃ったあと、一瞬静まり返る「間」を作る（約0.85秒）
+        await new Promise(r => setTimeout(r, 850));
+
+        // 2) 「え？何か起きる…？」という鼓動アニメーション＆予兆音
+        if (frame) frame.classList.add('frame-suspense-pulse');
+        playExtraSlotSurpriseSound();
+        await new Promise(r => setTimeout(r, 520));
+
+        const extraTotal = targetItems.length;
+        container.className = extraTotal === 4
+          ? 'grid grid-cols-2 sm:grid-cols-4 gap-4 lg:gap-6 w-full transition-all duration-500'
+          : 'grid grid-cols-3 sm:grid-cols-5 gap-4 lg:gap-6 w-full transition-all duration-500';
+
+        for (let extraIdx = 3; extraIdx < extraTotal; extraIdx++) {
+          const extraDiv = document.createElement('div');
+          extraDiv.className = 'reel-window h-48 lg:h-60 flex flex-col items-center justify-start pop-in-extra';
+          extraDiv.id = `slot-reel-${extraIdx}`;
+          extraDiv.innerHTML = `
+            <div class="reel-mask-top"></div>
+            <div class="reel-strip w-full" id="reel-strip-${extraIdx}"></div>
+            <div class="reel-mask-bottom"></div>
+          `;
+          container.appendChild(extraDiv);
+
+          // 4個目も少しじっくり回転させて停止
+          await animateSingleReel(extraIdx, distinctPool, targetItems[extraIdx], 1650, 16);
+          if (extraIdx < extraTotal - 1) {
+            await new Promise(r => setTimeout(r, 550));
+          }
+        }
+
+        if (frame) frame.classList.remove('frame-suspense-pulse');
+      }
+
+      playWinChime(outcome.type === 'special');
+
+      if (outcome.type === 'special') {
+        // 特別枠当選：3つの枠そのものがゴールドに昇格して輝き、下へ落ちていき、特別選択画面が現れる演出
+        const frame = document.getElementById('slot-machine-frame');
+        const cta = document.getElementById('draw-cta-area');
+        const headline = document.getElementById('draw-headline');
+        const specialBadge = document.getElementById('special-headline-badge');
+
+        for (let i = 0; i < initialReelCount; i++) {
+          const rEl = document.getElementById(`slot-reel-${i}`);
+          if (rEl) {
+            rEl.classList.remove('special-reach-glow');
+            rEl.classList.add('special-reel-glow');
+          }
+        }
+        if (frame) {
+          frame.classList.add('special-frame-aura');
+        }
+        if (specialBadge) {
+          specialBadge.classList.remove('hidden');
+        }
+        if (headline) {
+          headline.textContent = 'SPECIAL SELECTION 当選！';
+          headline.classList.add('text-[#B48A3E]');
+        }
+        if (cta) {
+          cta.style.opacity = '0';
+          cta.style.pointerEvents = 'none';
+        }
+
+        // 3つ揃った余韻をしっかり見せる
+        await new Promise(r => setTimeout(r, 950));
+
+        // 枠そのものが下へ落ちて消えていく
+        if (frame) {
+          frame.classList.add('special-drop-out');
+        }
+        await new Promise(r => setTimeout(r, 860));
+
+        isDrawing = false;
+        adminBtn.disabled = false;
+        adminBtn.classList.remove('opacity-30', 'pointer-events-none');
+
+        openSpecialSelectionStage();
+      } else {
+        await new Promise(r => setTimeout(r, 700));
+        isDrawing = false;
+        adminBtn.disabled = false;
+        adminBtn.classList.remove('opacity-30', 'pointer-events-none');
+        await finalizeSetWin(outcome.set, 'normal');
+      }
+    }
+
+    function animateSingleReel(reelIndex, distinctPoolItems, finalItem, durationMs, cyclesCount = 22) {
+      return new Promise((resolve) => {
+        const strip = document.getElementById(`reel-strip-${reelIndex}`);
+        const windowEl = document.getElementById(`slot-reel-${reelIndex}`);
+        if (!strip || !windowEl) return resolve();
+
+        const basePool = distinctPoolItems.length > 0 ? [...distinctPoolItems].sort(() => Math.random() - 0.5) : [finalItem];
+        const sequence = [];
+        let lastImg = '';
+
+        for (let k = 0; k < cyclesCount; k++) {
+          let candidate = basePool[k % basePool.length];
+          if (basePool.length > 1 && candidate.imageDataUrl === lastImg) {
+            candidate = basePool[(k + 1) % basePool.length];
+          }
+          sequence.push(candidate);
+          lastImg = candidate.imageDataUrl;
+        }
+        if (basePool.length > 1 && lastImg === finalItem.imageDataUrl) {
+          const alt = basePool.find(x => x.imageDataUrl !== finalItem.imageDataUrl);
+          if (alt) sequence.push(alt);
+        }
+        sequence.push(finalItem);
+
+        const itemHeight = windowEl.clientHeight || 220;
+        strip.innerHTML = sequence.map(itm => `
+          <div style="height:${itemHeight}px" class="w-full shrink-0 flex flex-col items-center justify-center text-center px-3">
+            <img src="${itm.imageDataUrl}" alt="" class="w-20 h-20 lg:w-28 lg:h-28 rounded-2xl object-cover shadow-sm mb-2.5 bg-[#F5F5F7]">
+            <span class="text-xs font-semibold text-[#1D1D1F] line-clamp-1">${escapeHtml(itm.name)}</span>
+          </div>
+        `).join('');
+
+        const totalTranslateY = (sequence.length - 1) * itemHeight;
+        const startTime = performance.now();
+        let lastTickIndex = -1;
+
+        function step(now) {
+          const elapsed = now - startTime;
+          const progress = Math.min(1, elapsed / durationMs);
+          // 後半の減速余韻が心地よく続くイージング
+          const eased = 1 - Math.pow(1 - progress, 4.2);
+          const currentY = eased * totalTranslateY;
+          strip.style.transform = `translate3d(0, -${currentY}px, 0)`;
+
+          const currentTick = Math.floor(currentY / itemHeight);
+          if (currentTick !== lastTickIndex && progress < 0.97) {
+            lastTickIndex = currentTick;
+            playTone(320 + (reelIndex * 40), 'sine', 0.025, 0.02);
+          }
+
+          if (progress < 1) {
+            requestAnimationFrame(step);
+          } else {
+            strip.style.transform = `translate3d(0, -${totalTranslateY}px, 0)`;
+            windowEl.classList.add('reel-stopped-pulse');
+            playReelStopSound(reelIndex);
+            resolve();
+          }
+        }
+
+        requestAnimationFrame(step);
+      });
+    }
+
+    function openSpecialSelectionStage() {
+      const state = getActiveState();
+      const activeSets = getActiveSets();
+      if (activeSets.length === 0) return;
+
+      document.getElementById('stage-draw').classList.add('hidden');
+      document.getElementById('stage-result').classList.add('hidden');
+      const specialStage = document.getElementById('stage-special-select');
+      specialStage.classList.remove('hidden', 'stage-transition-in');
+      specialStage.classList.add('flex', 'special-stage-reveal');
+
+      const grid = document.getElementById('special-sets-grid');
+      grid.innerHTML = activeSets.map((set, idx) => {
+        const items = set.itemIds.map(id => state.items.find(i => i.id === id)).filter(Boolean);
+        return `
+          <div onclick="confirmSpecialSetChoice('${set.id}')" style="animation-delay:${idx * 80}ms" class="apple-card p-6 cursor-pointer hover:border-[#B48A3E]/70 hover:shadow-xl hover:-translate-y-1 flex flex-col justify-between border-2 border-[#B48A3E]/35 bg-gradient-to-b from-white via-white to-[#B48A3E]/[0.05] fade-scale-in">
+            <div>
+              <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#B48A3E]/15 text-[#9A7228] text-[11px] font-semibold mb-3">
+                <i data-lucide="crown" class="w-3.5 h-3.5"></i>
+                <span>特別枠チョイス</span>
+              </div>
+              <h3 class="text-lg font-semibold text-[#1D1D1F] mb-4">${escapeHtml(set.name)}</h3>
+              <div class="grid grid-cols-3 gap-2.5 mb-5">
+                ${items.map(itm => `
+                  <div class="flex flex-col items-center text-center bg-[#F5F5F7] p-2.5 rounded-2xl">
+                    <img src="${itm.imageDataUrl}" class="w-14 h-14 rounded-xl object-cover mb-1.5 shadow-2xs">
+                    <span class="text-[11px] font-medium text-[#1D1D1F] line-clamp-1">${escapeHtml(itm.name)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            <button class="apple-pill-btn w-full py-3.5 rounded-full bg-gradient-to-r from-[#B48A3E] to-[#9A7228] text-white text-xs font-semibold shadow-md">
+              このセットに決定する
+            </button>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    async function confirmSpecialSetChoice(setId) {
+      const state = getActiveState();
+      const targetSet = state.sets.find(s => s.id === setId && !s.isWon);
+      if (!targetSet) return;
+      await finalizeSetWin(targetSet, 'special');
+    }
+
+    async function finalizeSetWin(wonSet, drawType = 'normal') {
+      const state = getActiveState();
+      wonSet.isWon = true;
+      const wonItems = [];
+      for (const itemId of wonSet.itemIds) {
+        const item = state.items.find(i => i.id === itemId);
+        if (item) {
+          item.isWon = true;
+          wonItems.push(item);
+        }
+      }
+
+      if (!isSimulationMode) {
+        const historyRecord = {
+          id: 'hist-' + Date.now(),
+          timestamp: new Date().toISOString(),
+          drawType,
+          setId: wonSet.id,
+          setName: wonSet.name,
+          items: wonItems.map(i => ({
+            id: i.id,
+            name: i.name,
+            giftLink: i.giftLink,
+            isRootKey: i.isRootKey,
+            rootKeyUrl: i.rootKeyUrl || state.settings.rootKeyDefaultUrl
+          }))
+        };
+        prodState.history.unshift(historyRecord);
+        await persistAllState();
+      }
+
+      currentResultSet = wonSet;
+      resetAdminNextButton();
+
+      document.getElementById('stage-draw').classList.add('hidden');
+      document.getElementById('stage-special-select').classList.add('hidden');
+      const resultStage = document.getElementById('stage-result');
+      resultStage.classList.remove('hidden');
+      resultStage.classList.add('flex', 'stage-transition-in');
+
+      const badge = document.getElementById('result-badge');
+      badge.className = `w-2.5 h-2.5 rounded-full shrink-0 ${drawType === 'special' ? 'bg-[#B48A3E]' : 'bg-[#0071E3]'}`;
+      document.getElementById('result-set-title').textContent = wonSet.name;
+
+      await renderMorphingResultCards(wonItems);
+    }
+
+    /**
+     * 当選カード描画：
+     * アイテム画像が中央へ吸い込まれるのに合わせて、QRコードの外周から内側へ向かって
+     * 四角いドットが「白か黒か迷うようにカタカタフリッカー」しながら組み立てられる演出
+     */
+    async function renderMorphingResultCards(items) {
+      const renderToken = ++activeResultRenderToken;
+      const wrapper = document.getElementById('result-cards-wrapper');
+      if (!wrapper) return;
+
+      const state = getActiveState();
+      const count = items.length;
+      wrapper.className = 'grid gap-5 w-full max-w-6xl mx-auto ';
+      if (count === 1) wrapper.className += 'grid-cols-1 max-w-md';
+      else if (count === 2) wrapper.className += 'grid-cols-2 max-w-3xl';
+      else if (count === 3) wrapper.className += 'grid-cols-3';
+      else if (count === 4) wrapper.className += 'grid-cols-2 lg:grid-cols-4';
+      else wrapper.className += 'grid-cols-2 md:grid-cols-3 lg:grid-cols-5';
+
+      wrapper.innerHTML = '';
+
+      items.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'apple-card p-6 flex flex-col items-center justify-between text-center min-h-[320px] fade-scale-in';
+        card.style.animationDelay = `${index * 70}ms`;
+
+        if (item.isRootKey) {
+          const targetUrl = item.rootKeyUrl || state.settings.rootKeyDefaultUrl || '';
+          card.classList.add('border-[#B48A3E]/35', 'bg-gradient-to-b', 'from-white', 'to-[#B48A3E]/[0.04]', 'cursor-pointer', 'hover:shadow-lg');
+          card.onclick = () => openRootKeyExternal(targetUrl);
+          card.innerHTML = `
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#B48A3E]/15 text-[#B48A3E] text-[11px] font-semibold tracking-wider">
+              <i data-lucide="key" class="w-3 h-3"></i>
+              <span>ROOT KEY</span>
+            </div>
+            <div class="my-4 flex flex-col items-center">
+              <img src="${item.imageDataUrl}" class="w-28 h-28 rounded-3xl object-cover shadow-md mb-3.5 border border-[#B48A3E]/20">
+              <h3 class="text-base font-semibold text-[#1D1D1F] line-clamp-1">${escapeHtml(item.name)}</h3>
+            </div>
+            <button type="button" class="apple-pill-btn w-full py-3 rounded-full bg-[#B48A3E] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+              <span>OPEN</span>
+            </button>
+          `;
+          wrapper.appendChild(card);
+          return;
+        }
+
+        const safeName = escapeHtml(item.name);
+        const safeExpiry = item.expiryDate ? escapeHtml(item.expiryDate) : '';
+
+        card.classList.add('cursor-pointer', 'hover:shadow-lg', 'hover:-translate-y-0.5');
+        card.innerHTML = `
+          <div class="w-48 h-48 lg:w-52 lg:h-52 my-auto flex items-center justify-center relative">
+            <canvas id="morph-qr-canvas-${index}" width="420" height="420" class="w-full h-full object-contain rounded-2xl"></canvas>
+          </div>
+          <div class="mt-4 w-full">
+            <h3 class="text-sm lg:text-base font-semibold tracking-tight text-[#1D1D1F] line-clamp-1">${safeName}</h3>
+            ${safeExpiry ? `<p class="text-[11px] text-[#86868B] mt-0.5">${safeExpiry}</p>` : ''}
+          </div>
+        `;
+        wrapper.appendChild(card);
+
+        runCardQrMorphAnimation(
+          `morph-qr-canvas-${index}`,
+          item.giftLink || 'https://example.com',
+          item.imageDataUrl,
+          index,
+          renderToken,
+          (finalQrDataUrl) => {
+            if (finalQrDataUrl) card.onclick = () => openQrFocus(finalQrDataUrl, safeName, safeExpiry);
+          }
+        );
+      });
+
+      lucide.createIcons();
+    }
+
+    function runCardQrMorphAnimation(canvasId, qrText, centerImageUrl, cardIndex, renderToken, onReadyCallback) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const size = canvas.width;
+
+      let qr = null;
+      try {
+        qr = qrcode(0, 'H');
+        qr.addData(qrText);
+        qr.make();
+      } catch (e) {
+        return;
+      }
+
+      const moduleCount = qr.getModuleCount();
+      const quietZone = 3;
+      const totalModules = moduleCount + quietZone * 2;
+      const cellSize = size / totalModules;
+      const half = (moduleCount - 1) / 2;
+      const maxChebyshev = half;
+
+      const cellSeeds = Array.from({ length: moduleCount }, (_, r) =>
+        Array.from({ length: moduleCount }, (_, c) => ((r * 73 + c * 137 + cardIndex * 31) % 97) / 97)
+      );
+
+      const finalLogoSize = Math.floor(size * 0.21);
+      const initialLogoSize = Math.floor(size * 0.68);
+
+      const img = new Image();
+      let imgLoaded = false;
+      img.onload = () => { imgLoaded = true; };
+      img.src = centerImageUrl;
+
+      const holdDuration = 950 + cardIndex * 80;
+      const morphDuration = 1350;
+      const startTime = performance.now();
+      let soundPlayed = false;
+
+      const easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+      function drawFrame(now) {
+        if (renderToken !== activeResultRenderToken) return;
+
+        const elapsed = now - startTime;
+        let t = 0;
+        if (elapsed > holdDuration) {
+          t = Math.min(1, (elapsed - holdDuration) / morphDuration);
+          if (!soundPlayed && cardIndex === 0) {
+            soundPlayed = true;
+            playMorphAssembleSound();
+          }
+        }
+
+        const suctionT = Math.min(1, t / 0.72);
+        const suctionEase = easeInOutCubic(suctionT);
+
+        ctx.clearRect(0, 0, size, size);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, size, size);
+
+        // QRコードの四角いドットが「外周から内側へ」白か黒か迷うようにカタカタ決まっていく演出
+        if (t > 0) {
+          const tickStep = Math.floor(elapsed / 55);
+
+          for (let r = 0; r < moduleCount; r++) {
+            for (let c = 0; c < moduleCount; c++) {
+              const isActuallyDark = qr.isDark(r, c);
+
+              const chebyshevDist = Math.max(Math.abs(r - half), Math.abs(c - half));
+              const outerToInnerNorm = 1 - (chebyshevDist / Math.max(1, maxChebyshev));
+
+              const seed = cellSeeds[r][c];
+              const startThreshold = outerToInnerNorm * 0.58 + seed * 0.12;
+              const settleWindow = 0.28;
+
+              if (t < startThreshold) continue;
+
+              const cellProgress = Math.min(1, (t - startThreshold) / settleWindow);
+
+              let renderDark = false;
+              let alpha = 1;
+
+              if (cellProgress < 1) {
+                const flickerHash = Math.sin((tickStep + seed * 29) * 12.9898) * 43758.5453;
+                const frac = flickerHash - Math.floor(flickerHash);
+
+                if (frac < cellProgress * 0.65) {
+                  renderDark = isActuallyDark;
+                } else {
+                  renderDark = frac > 0.48;
+                }
+                alpha = 0.35 + 0.65 * cellProgress;
+              } else {
+                renderDark = isActuallyDark;
+                alpha = 1;
+              }
+
+              if (!renderDark) continue;
+
+              const x = Math.floor((c + quietZone) * cellSize);
+              const y = Math.floor((r + quietZone) * cellSize);
+              const w = Math.ceil(cellSize);
+              const h = Math.ceil(cellSize);
+
+              ctx.save();
+              ctx.globalAlpha = alpha;
+              ctx.fillStyle = '#1D1D1F';
+              ctx.fillRect(x, y, w, h);
+              ctx.restore();
+            }
+          }
+        }
+
+        // アイテム画像が中央のQRエンブレム位置へ吸い込まれる描画
+        const currentLogoSize = initialLogoSize + (finalLogoSize - initialLogoSize) * suctionEase;
+        const currentPad = Math.floor(currentLogoSize * 0.14) * suctionEase;
+        const currentBoxSize = currentLogoSize + currentPad * 2;
+        const boxX = (size - currentBoxSize) / 2;
+        const boxY = (size - currentBoxSize) / 2;
+        const cornerRadius = 44 + (14 - 44) * suctionEase;
+
+        if (suctionEase > 0.05) {
+          ctx.save();
+          ctx.globalAlpha = suctionEase;
+          ctx.fillStyle = '#FFFFFF';
+          roundRectPath(ctx, boxX, boxY, currentBoxSize, currentBoxSize, cornerRadius + 4);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        if (imgLoaded) {
+          ctx.save();
+          roundRectPath(
+            ctx,
+            (size - currentLogoSize) / 2,
+            (size - currentLogoSize) / 2,
+            currentLogoSize,
+            currentLogoSize,
+            cornerRadius
+          );
+          ctx.clip();
+          ctx.drawImage(img, (size - currentLogoSize) / 2, (size - currentLogoSize) / 2, currentLogoSize, currentLogoSize);
+          ctx.restore();
+        }
+
+        if (t < 1) {
+          requestAnimationFrame(drawFrame);
+        } else {
+          if (onReadyCallback) onReadyCallback(canvas.toDataURL('image/png'));
+        }
+      }
+
+      requestAnimationFrame(drawFrame);
+    }
+
+    function openQrFocus(qrDataUrl, itemName, expiryText) {
+      const overlay = document.getElementById('qr-focus-overlay');
+      const container = document.getElementById('qr-focus-canvas-container');
+      document.getElementById('qr-focus-item-name').textContent = itemName;
+
+      const expiryEl = document.getElementById('qr-focus-expiry');
+      if (expiryText) {
+        expiryEl.textContent = expiryText;
+        expiryEl.classList.remove('hidden');
+      } else {
+        expiryEl.textContent = '';
+        expiryEl.classList.add('hidden');
+      }
+
+      container.innerHTML = `<img src="${qrDataUrl}" alt="QR" class="w-64 h-64 sm:w-72 sm:h-72 object-contain rounded-xl">`;
+      requestAnimationFrame(() => overlay.classList.add('is-visible'));
+    }
+
+    function closeQrFocus(event, force = false) {
+      if (force || (event && event.target.id === 'qr-focus-overlay')) {
+        document.getElementById('qr-focus-overlay').classList.remove('is-visible');
+      }
+    }
+
+    function openRootKeyExternal(url) {
+      if (!navigator.onLine) {
+        showToast('現在オフラインのため外部サイトを開けません', 'error');
+        return;
+      }
+      if (!url) return;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+
+    function handleAdminNextRound() {
+      const btn = document.getElementById('next-round-btn');
+      const icon = document.getElementById('next-round-icon');
+      if (!adminNextConfirmStep) {
+        adminNextConfirmStep = true;
+        btn.classList.remove('bg-[#F5F5F7]', 'text-[#1D1D1F]');
+        btn.classList.add('bg-[#0071E3]', 'text-white', 'scale-105', 'shadow-md');
+        if (icon) {
+          icon.setAttribute('data-lucide', 'check');
+          icon.classList.remove('text-[#1D1D1F]');
+          icon.classList.add('text-white');
+          lucide.createIcons();
+        }
+
+        clearTimeout(adminNextResetTimer);
+        adminNextResetTimer = setTimeout(() => resetAdminNextButton(), 3500);
+      } else {
+        resetAdminNextButton();
+        currentResultSet = null;
+        activeResultRenderToken++;
+        document.getElementById('stage-result').classList.add('hidden');
+        document.getElementById('stage-special-select').classList.add('hidden');
+        const drawStage = document.getElementById('stage-draw');
+        drawStage.classList.remove('hidden');
+        drawStage.classList.add('stage-transition-in');
+        updateDrawScreenAvailability();
+      }
+    }
+
+    function resetAdminNextButton() {
+      adminNextConfirmStep = false;
+      const btn = document.getElementById('next-round-btn');
+      const icon = document.getElementById('next-round-icon');
+      if (btn) {
+        btn.classList.add('bg-[#F5F5F7]', 'text-[#1D1D1F]');
+        btn.classList.remove('bg-[#0071E3]', 'text-white', 'scale-105', 'shadow-md');
+      }
+      if (icon) {
+        icon.setAttribute('data-lucide', 'chevron-right');
+        icon.classList.remove('text-white');
+        icon.classList.add('text-[#1D1D1F]');
+        lucide.createIcons();
+      }
+    }
+
+    function openAuthModal() {
+      if (isDrawing) return;
+      if (isSimulationMode) {
+        exitSimulationMode();
+        return;
+      }
+
+      swipeInputBuffer = [];
+      totalSwipeStrokesInSession = 0;
+      pinInputBuffer = '';
+
+      document.getElementById('auth-swipe-mode').classList.remove('hidden');
+      document.getElementById('auth-pin-mode').classList.add('hidden');
+
+      const modal = document.getElementById('auth-modal');
+      requestAnimationFrame(() => modal.classList.add('is-visible'));
+    }
+
+    function closeAuthModal() {
+      document.getElementById('auth-modal').classList.remove('is-visible');
+      swipeInputBuffer = [];
+      pinInputBuffer = '';
+    }
+
+    (function setupBlankSwipeAuthListeners() {
+      let startX = 0, startY = 0, tracking = false;
+      window.addEventListener('DOMContentLoaded', () => {
+        const swipeArea = document.getElementById('auth-swipe-mode');
+        if (!swipeArea) return;
+
+        const onStart = (x, y) => { startX = x; startY = y; tracking = true; };
+        const onEnd = async (x, y) => {
+          if (!tracking) return;
+          tracking = false;
+          const dx = x - startX, dy = y - startY;
+          if (Math.abs(dx) < 32 && Math.abs(dy) < 32) return;
+
+          let dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'RIGHT' : 'LEFT') : (dy > 0 ? 'DOWN' : 'UP');
+          swipeInputBuffer.push(dir);
+          totalSwipeStrokesInSession++;
+          if (swipeInputBuffer.length > 10) swipeInputBuffer.shift();
+
+          const minLen = Math.min(3, swipeInputBuffer.length);
+          for (let len = minLen; len <= swipeInputBuffer.length; len++) {
+            const candidateSeq = swipeInputBuffer.slice(-len).join('-');
+            const hashed = await sha256WithSalt(candidateSeq, prodState.security.salt);
+            if (hashed === prodState.security.swipeHash) {
+              swipeInputBuffer = [];
+              closeAuthModal();
+              enterAdminView();
+              return;
+            }
+          }
+
+          if (totalSwipeStrokesInSession >= 18) {
+            document.getElementById('auth-swipe-mode').classList.add('hidden');
+            document.getElementById('auth-pin-mode').classList.remove('hidden');
+            clearPinInput();
+          }
+        };
+
+        swipeArea.addEventListener('touchstart', (e) => { if (e.touches.length > 0) onStart(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+        swipeArea.addEventListener('touchend', (e) => { if (e.changedTouches.length > 0) onEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY); });
+        swipeArea.addEventListener('mousedown', (e) => onStart(e.clientX, e.clientY));
+        swipeArea.addEventListener('mouseup', (e) => onEnd(e.clientX, e.clientY));
+      });
+    })();
+
+    function appendPinDigit(digit) {
+      if (pinInputBuffer.length >= 12) return;
+      pinInputBuffer += digit;
+      document.getElementById('pin-display-input').value = pinInputBuffer;
+    }
+
+    function clearPinInput() {
+      pinInputBuffer = '';
+      document.getElementById('pin-display-input').value = '';
+    }
+
+    async function submitPinCode() {
+      if (!pinInputBuffer) return;
+      const hashed = await sha256WithSalt(pinInputBuffer, prodState.security.salt);
+      if (hashed === prodState.security.pinHash) {
+        closeAuthModal();
+        enterAdminView();
+      } else {
+        clearPinInput();
+      }
+    }
+
+    function enterAdminView() {
+      stopIdleReelLoop();
+      document.getElementById('participant-view').classList.add('hidden');
+      const adminView = document.getElementById('admin-view');
+      adminView.classList.remove('hidden');
+      adminView.classList.add('flex');
+      switchAdminTab('items');
+      refreshAllViews();
+    }
+
+    function exitAdminView() {
+      document.getElementById('admin-view').classList.add('hidden');
+      document.getElementById('admin-view').classList.remove('flex');
+      document.getElementById('participant-view').classList.remove('hidden');
+      updateDrawScreenAvailability();
+    }
+
+    function switchAdminTab(tabName) {
+      document.querySelectorAll('.admin-section').forEach(el => el.classList.add('hidden'));
+      const target = document.getElementById(`admin-tab-${tabName}`);
+      if (target) target.classList.remove('hidden');
+
+      document.querySelectorAll('.admin-nav-btn').forEach(btn => {
+        if (btn.dataset.adminTab === tabName) {
+          btn.classList.add('bg-[#1D1D1F]', 'text-white');
+          btn.classList.remove('text-[#86868B]', 'hover:bg-gray-100');
+        } else {
+          btn.classList.remove('bg-[#1D1D1F]', 'text-white');
+          btn.classList.add('text-[#86868B]', 'hover:bg-gray-100');
+        }
+      });
+      refreshAllViews();
+    }
+
+    function setItemRegisterMode(mode) {
+      itemRegisterMode = mode;
+      const singleBtn = document.getElementById('mode-single-btn');
+      const bulkBtn = document.getElementById('mode-bulk-btn');
+      const singleGroup = document.getElementById('single-link-group');
+      const bulkGroup = document.getElementById('bulk-links-group');
+      const bulkNumOpt = document.getElementById('bulk-numbering-option');
+
+      if (mode === 'single') {
+        singleBtn.className = 'px-3 py-1 rounded-full text-xs font-medium bg-white shadow-sm text-[#1D1D1F]';
+        bulkBtn.className = 'px-3 py-1 rounded-full text-xs font-medium text-[#86868B]';
+        singleGroup.classList.remove('hidden');
+        bulkGroup.classList.add('hidden');
+        bulkNumOpt.classList.add('hidden');
+      } else {
+        bulkBtn.className = 'px-3 py-1 rounded-full text-xs font-medium bg-white shadow-sm text-[#1D1D1F]';
+        singleBtn.className = 'px-3 py-1 rounded-full text-xs font-medium text-[#86868B]';
+        bulkGroup.classList.remove('hidden');
+        bulkNumOpt.classList.remove('hidden');
+        singleGroup.classList.add('hidden');
+      }
+    }
+
+    function toggleRootKeyUrlField() {
+      const checked = document.getElementById('item-is-rootkey').checked;
+      const box = document.getElementById('rootkey-custom-url-group');
+      if (checked) box.classList.remove('hidden');
+      else box.classList.add('hidden');
+    }
+
+    function handleItemImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        resizeImageDataUrl(e.target.result, 512, (resized) => {
+          currentUploadedImage = resized;
+          updateItemImagePreview();
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    /**
+     * 特別抽選枠の3リール演出用画像アップロード
+     */
+    function handleSpecialReelImageUpload(event, slotIndex) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        resizeImageDataUrl(e.target.result, 512, async (resized) => {
+          if (!Array.isArray(prodState.settings.specialReelImages)) {
+            prodState.settings.specialReelImages = ['', '', ''];
+          }
+          prodState.settings.specialReelImages[slotIndex] = resized;
+          await persistAllState();
+          renderSpecialReelPreviews();
+          showToast(`特別抽選枠（${slotIndex + 1}枠目）の画像を設定しました`);
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function resetSpecialReelImages() {
+      prodState.settings.specialReelImages = ['', '', ''];
+      await persistAllState();
+      renderSpecialReelPreviews();
+      showToast('特別抽選枠の画像を初期状態に戻しました');
+    }
+
+    function renderSpecialReelPreviews() {
+      for (let i = 0; i < 3; i++) {
+        const box = document.getElementById(`special-reel-preview-${i}`);
+        if (!box) continue;
+        const src = getSpecialReelImage(prodState, i);
+        box.innerHTML = `<img src="${src}" alt="特別枠${i + 1}" class="w-full h-full object-cover">`;
+      }
+    }
+
+    function resizeImageDataUrl(dataUrl, maxSide, callback) {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxSide || h > maxSide) {
+          if (w > h) { h = Math.round(h * maxSide / w); w = maxSide; }
+          else { w = Math.round(w * maxSide / h); h = maxSide; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        callback(canvas.toDataURL('image/png', 0.9));
+      };
+      img.onerror = () => callback(dataUrl);
+      img.src = dataUrl;
+    }
+
+    function updateItemImagePreview() {
+      const box = document.getElementById('item-image-preview-box');
+      if (currentUploadedImage) {
+        box.innerHTML = `<img src="${currentUploadedImage}" class="w-full h-full object-cover">`;
+      } else {
+        box.innerHTML = `<i data-lucide="image" class="w-6 h-6 text-[#86868B]"></i>`;
+        lucide.createIcons();
+      }
+    }
+
+    function openImageLibraryModal(target = 'item') {
+      imageLibraryTarget = target;
+      const itemImgs = prodState.items.map(i => i.imageDataUrl).filter(Boolean);
+      const specialImgs = Array.isArray(prodState.settings.specialReelImages)
+        ? prodState.settings.specialReelImages.filter(Boolean)
+        : [];
+      const uniqueImages = Array.from(new Set([...itemImgs, ...specialImgs]));
+
+      const grid = document.getElementById('image-library-grid');
+      if (uniqueImages.length === 0) {
+        grid.innerHTML = `<p class="col-span-full text-center text-xs text-[#86868B] py-8">登録済みの画像がありません</p>`;
+      } else {
+        grid.innerHTML = uniqueImages.map(src => `
+          <div onclick="selectLibraryImage('${src}')" class="aspect-square rounded-2xl overflow-hidden border border-black/10 cursor-pointer hover:ring-2 hover:ring-[#0071E3]">
+            <img src="${src}" class="w-full h-full object-cover">
+          </div>
+        `).join('');
+      }
+      document.getElementById('image-library-modal').classList.remove('hidden');
+      document.getElementById('image-library-modal').classList.add('flex');
+    }
+
+    async function selectLibraryImage(src) {
+      if (imageLibraryTarget.startsWith('special-')) {
+        const idx = parseInt(imageLibraryTarget.split('-')[1], 10);
+        if (!Array.isArray(prodState.settings.specialReelImages)) {
+          prodState.settings.specialReelImages = ['', '', ''];
+        }
+        prodState.settings.specialReelImages[idx] = src;
+        await persistAllState();
+        renderSpecialReelPreviews();
+        closeImageLibraryModal();
+        showToast(`特別抽選枠（${idx + 1}枠目）の画像を設定しました`);
+        return;
+      }
+
+      currentUploadedImage = src;
+      updateItemImagePreview();
+      closeImageLibraryModal();
+      showToast('登録済み画像を選択しました');
+    }
+
+    function closeImageLibraryModal() {
+      document.getElementById('image-library-modal').classList.add('hidden');
+      document.getElementById('image-library-modal').classList.remove('flex');
+    }
+
+    async function saveItemForm() {
+      const editId = document.getElementById('edit-item-id').value;
+      const nameBase = document.getElementById('item-name-input').value.trim();
+      const isRootKey = document.getElementById('item-is-rootkey').checked;
+      const rootKeyUrl = document.getElementById('item-rootkey-url').value.trim();
+      const expiryDate = document.getElementById('item-expiry-input').value;
+
+      if (!nameBase) {
+        showToast('アイテム名を入力してください', 'error');
+        return;
+      }
+
+      const imageToUse = currentUploadedImage || createCleanIconDataUrl('#1D1D1F', '#FFFFFF', nameBase.slice(0, 2).toUpperCase());
+
+      if (editId) {
+        const target = prodState.items.find(i => i.id === editId);
+        if (!target) return;
+        target.name = nameBase;
+        target.imageDataUrl = imageToUse;
+        target.giftLink = document.getElementById('item-link-input').value.trim();
+        target.isRootKey = isRootKey;
+        target.rootKeyUrl = rootKeyUrl;
+        target.expiryDate = expiryDate;
+
+        await persistAllState();
+        resetItemForm();
+        refreshAllViews();
+        showToast('アイテム情報を更新しました');
+        return;
+      }
+
+      if (itemRegisterMode === 'single') {
+        const singleLink = document.getElementById('item-link-input').value.trim();
+        if (!isRootKey && !singleLink) {
+          showToast('ギフトリンクを入力してください', 'error');
+          return;
+        }
+        prodState.items.unshift({
+          id: 'itm-' + Date.now(),
+          name: nameBase,
+          imageDataUrl: imageToUse,
+          giftLink: singleLink,
+          isRootKey,
+          rootKeyUrl,
+          expiryDate,
+          setId: null,
+          isWon: false
+        });
+        await persistAllState();
+        resetItemForm();
+        refreshAllViews();
+        showToast('アイテムを登録しました');
+      } else {
+        const rawLines = document.getElementById('item-bulk-links-input').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (rawLines.length === 0) {
+          showToast('一括登録するギフトリンクを1行以上入力してください', 'error');
+          return;
+        }
+        const autoNum = document.getElementById('bulk-auto-number').checked;
+        rawLines.forEach((link, idx) => {
+          prodState.items.unshift({
+            id: `itm-${Date.now()}-${idx}`,
+            name: autoNum ? `${nameBase} #${idx + 1}` : nameBase,
+            imageDataUrl: imageToUse,
+            giftLink: link,
+            isRootKey,
+            rootKeyUrl,
+            expiryDate,
+            setId: null,
+            isWon: false
+          });
+        });
+        await persistAllState();
+        resetItemForm();
+        refreshAllViews();
+        showToast(`${rawLines.length} 件のアイテムを一括登録しました`);
+      }
+    }
+
+    function editItem(itemId) {
+      const item = prodState.items.find(i => i.id === itemId);
+      if (!item) return;
+
+      setItemRegisterMode('single');
+      document.getElementById('edit-item-id').value = item.id;
+      document.getElementById('item-form-title').textContent = 'アイテム編集';
+      document.getElementById('save-item-btn-label').textContent = '変更を保存する';
+      document.getElementById('cancel-edit-item-btn').classList.remove('hidden');
+
+      document.getElementById('item-name-input').value = item.name;
+      document.getElementById('item-link-input').value = item.giftLink || '';
+      document.getElementById('item-is-rootkey').checked = !!item.isRootKey;
+      document.getElementById('item-rootkey-url').value = item.rootKeyUrl || '';
+      document.getElementById('item-expiry-input').value = item.expiryDate || '';
+      toggleRootKeyUrlField();
+
+      currentUploadedImage = item.imageDataUrl;
+      updateItemImagePreview();
+    }
+
+    function resetItemForm() {
+      document.getElementById('edit-item-id').value = '';
+      document.getElementById('item-form-title').textContent = '新規アイテム登録';
+      document.getElementById('save-item-btn-label').textContent = 'アイテムを登録する';
+      document.getElementById('cancel-edit-item-btn').classList.add('hidden');
+
+      document.getElementById('item-name-input').value = '';
+      document.getElementById('item-link-input').value = '';
+      document.getElementById('item-bulk-links-input').value = '';
+      document.getElementById('item-is-rootkey').checked = false;
+      document.getElementById('item-rootkey-url').value = '';
+      document.getElementById('item-expiry-input').value = '';
+      toggleRootKeyUrlField();
+
+      currentUploadedImage = '';
+      updateItemImagePreview();
+    }
+
+    function confirmDeleteItem(itemId) {
+      const item = prodState.items.find(i => i.id === itemId);
+      if (!item) return;
+      openConfirmDialog('アイテムの削除', `「${item.name}」を削除しますか？`, async () => {
+        prodState.sets.forEach(s => s.itemIds = s.itemIds.filter(id => id !== itemId));
+        prodState.items = prodState.items.filter(i => i.id !== itemId);
+        await persistAllState();
+        refreshAllViews();
+        showToast('アイテムを削除しました');
+      });
+    }
+
+    function setItemFilter(filter) {
+      currentItemFilter = filter;
+      document.querySelectorAll('.item-filter-btn').forEach(btn => {
+        if (btn.dataset.itemFilter === filter) {
+          btn.className = 'item-filter-btn px-3 py-1.5 rounded-full text-xs font-medium bg-[#1D1D1F] text-white';
+        } else {
+          btn.className = 'item-filter-btn px-3 py-1.5 rounded-full text-xs font-medium bg-[#F5F5F7] text-[#86868B]';
+        }
+      });
+      renderAdminItemsList();
+    }
+
+    function renderAdminItemsList() {
+      const container = document.getElementById('admin-items-list');
+      const summary = document.getElementById('items-count-summary');
+      if (!container) return;
+
+      const unassignedCount = prodState.items.filter(i => !i.setId).length;
+      summary.textContent = `全 ${prodState.items.length} 件（未所属: ${unassignedCount} 件）`;
+
+      let filtered = prodState.items;
+      if (currentItemFilter === 'unassigned') filtered = filtered.filter(i => !i.setId);
+      else if (currentItemFilter === 'assigned') filtered = filtered.filter(i => !!i.setId);
+      else if (currentItemFilter === 'won') filtered = filtered.filter(i => i.isWon);
+      else if (currentItemFilter === 'rootkey') filtered = filtered.filter(i => i.isRootKey);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="col-span-full text-center py-12 text-xs text-[#86868B]">該当するアイテムがありません</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(item => {
+        const parentSet = item.setId ? prodState.sets.find(s => s.id === item.setId) : null;
+        return `
+          <div class="p-3.5 rounded-2xl bg-[#F5F5F7] border border-black/5 flex items-center gap-3">
+            <img src="${item.imageDataUrl}" class="w-14 h-14 rounded-xl object-cover bg-white shrink-0">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-xs font-semibold text-[#1D1D1F] truncate">${escapeHtml(item.name)}</span>
+                ${item.isRootKey ? '<span class="px-2 py-0.5 rounded-full bg-[#B48A3E]/15 text-[#B48A3E] text-[10px] font-semibold">ルートキー</span>' : ''}
+              </div>
+              <p class="text-[11px] text-[#86868B] truncate mt-0.5">
+                ${item.isRootKey ? (item.rootKeyUrl || '共通ルートキーURL使用') : (item.giftLink || 'リンク未設定')}
+              </p>
+              <div class="mt-1">
+                ${parentSet ? `<span class="inline-block px-2 py-0.5 rounded-md bg-white text-[10px] font-medium text-[#1D1D1F] border border-black/5">所属: ${escapeHtml(parentSet.name)}</span>` : `<span class="inline-block px-2 py-0.5 rounded-md bg-blue-500/10 text-[10px] font-medium text-[#0071E3]">未所属</span>`}
+              </div>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <button onclick="editItem('${item.id}')" class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#1D1D1F] hover:bg-gray-100 border border-black/5"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+              <button onclick="confirmDeleteItem('${item.id}')" class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-red-500 hover:bg-red-50 border border-black/5"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function renderSetItemSelector() {
+      const container = document.getElementById('set-item-selector-list');
+      if (!container) return;
+
+      const editingSetId = document.getElementById('edit-set-id').value;
+      const editingSet = editingSetId ? prodState.sets.find(s => s.id === editingSetId) : null;
+      const currentSelectedIds = editingSet ? new Set(editingSet.itemIds) : new Set();
+
+      if (prodState.items.length === 0) {
+        container.innerHTML = `<p class="text-xs text-[#86868B] text-center py-6">先にアイテムを登録してください</p>`;
+        return;
+      }
+
+      container.innerHTML = prodState.items.map(item => {
+        const belongsToOtherSet = item.setId && item.setId !== editingSetId;
+        const isChecked = currentSelectedIds.has(item.id);
+
+        return `
+          <label class="flex items-center justify-between p-2.5 rounded-xl bg-white border border-black/5 ${belongsToOtherSet ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-black/20'}">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <input type="checkbox" value="${item.id}" onchange="updateSelectedSetItemsCounter()" ${isChecked ? 'checked' : ''} ${belongsToOtherSet ? 'disabled' : ''} class="set-item-checkbox w-4 h-4 accent-[#0071E3]">
+              <img src="${item.imageDataUrl}" class="w-9 h-9 rounded-lg object-cover shrink-0">
+              <div class="min-w-0">
+                <p class="text-xs font-medium text-[#1D1D1F] truncate">${escapeHtml(item.name)}</p>
+              </div>
+            </div>
+          </label>
+        `;
+      }).join('');
+      updateSelectedSetItemsCounter();
+    }
+
+    function updateSelectedSetItemsCounter() {
+      const checkedCount = document.querySelectorAll('.set-item-checkbox:checked').length;
+      const el = document.getElementById('selected-set-items-count');
+      if (el) el.textContent = `${checkedCount}個選択中`;
+    }
+
+    async function saveSetForm() {
+      const editSetId = document.getElementById('edit-set-id').value;
+      const name = document.getElementById('set-name-input').value.trim();
+      const weight = parseInt(document.getElementById('set-weight-input').value, 10);
+      const selectedIds = Array.from(document.querySelectorAll('.set-item-checkbox:checked')).map(cb => cb.value);
+
+      if (!name) {
+        showToast('セット名を入力してください', 'error');
+        return;
+      }
+      if (isNaN(weight) || weight <= 0) {
+        showToast('重みは1以上の整数を入力してください', 'error');
+        return;
+      }
+      if (selectedIds.length === 0) {
+        showToast('アイテムを1つ以上選択してください', 'error');
+        return;
+      }
+
+      if (editSetId) {
+        const targetSet = prodState.sets.find(s => s.id === editSetId);
+        if (!targetSet) return;
+        for (const oldId of targetSet.itemIds) {
+          if (!selectedIds.includes(oldId)) {
+            const oldItem = prodState.items.find(i => i.id === oldId);
+            if (oldItem && oldItem.setId === editSetId) oldItem.setId = null;
+          }
+        }
+        for (const newId of selectedIds) {
+          const item = prodState.items.find(i => i.id === newId);
+          if (item) { item.setId = editSetId; item.isWon = targetSet.isWon; }
+        }
+        targetSet.name = name;
+        targetSet.weight = weight;
+        targetSet.itemIds = selectedIds;
+        await persistAllState();
+        resetSetForm();
+        refreshAllViews();
+        showToast('セットを更新しました');
+      } else {
+        const newSetId = 'set-' + Date.now();
+        for (const id of selectedIds) {
+          const item = prodState.items.find(i => i.id === id);
+          if (item) { item.setId = newSetId; item.isWon = false; }
+        }
+        prodState.sets.push({ id: newSetId, name, itemIds: selectedIds, weight, isWon: false });
+        await persistAllState();
+        resetSetForm();
+        refreshAllViews();
+        showToast('セットを作成しました');
+      }
+    }
+
+    function editSet(setId) {
+      const targetSet = prodState.sets.find(s => s.id === setId);
+      if (!targetSet) return;
+      document.getElementById('edit-set-id').value = targetSet.id;
+      document.getElementById('set-form-title').textContent = 'セット編集';
+      document.getElementById('save-set-btn-label').textContent = '変更を保存する';
+      document.getElementById('cancel-edit-set-btn').classList.remove('hidden');
+      document.getElementById('set-name-input').value = targetSet.name;
+      document.getElementById('set-weight-input').value = targetSet.weight;
+      renderSetItemSelector();
+    }
+
+    function resetSetForm() {
+      document.getElementById('edit-set-id').value = '';
+      document.getElementById('set-form-title').textContent = '新規セット作成';
+      document.getElementById('save-set-btn-label').textContent = 'セットを作成する';
+      document.getElementById('cancel-edit-set-btn').classList.add('hidden');
+      document.getElementById('set-name-input').value = '';
+      document.getElementById('set-weight-input').value = 10;
+      renderSetItemSelector();
+    }
+
+    function confirmDeleteSet(setId) {
+      const targetSet = prodState.sets.find(s => s.id === setId);
+      if (!targetSet) return;
+      openConfirmDialog('セットの削除', `「${targetSet.name}」を削除しますか？`, async () => {
+        targetSet.itemIds.forEach(itemId => {
+          const item = prodState.items.find(i => i.id === itemId);
+          if (item && item.setId === setId) item.setId = null;
+        });
+        prodState.sets = prodState.sets.filter(s => s.id !== setId);
+        await persistAllState();
+        refreshAllViews();
+        showToast('セットを削除しました');
+      });
+    }
+
+    async function restoreSingleSet(setId) {
+      const targetSet = prodState.sets.find(s => s.id === setId);
+      if (!targetSet) return;
+      targetSet.isWon = false;
+      targetSet.itemIds.forEach(itemId => {
+        const item = prodState.items.find(i => i.id === itemId);
+        if (item) item.isWon = false;
+      });
+      await persistAllState();
+      refreshAllViews();
+      showToast('セットを復元しました');
+    }
+
+    function restoreAllWonSets() {
+      const wonSets = prodState.sets.filter(s => s.isWon);
+      if (wonSets.length === 0) {
+        showToast('復元可能なセットはありません');
+        return;
+      }
+      openConfirmDialog('一括復元', 'すべての当選済みセットを復元しますか？', async () => {
+        wonSets.forEach(s => {
+          s.isWon = false;
+          s.itemIds.forEach(itemId => {
+            const item = prodState.items.find(i => i.id === itemId);
+            if (item) item.isWon = false;
+          });
+        });
+        await persistAllState();
+        refreshAllViews();
+        showToast('すべて復元しました');
+      });
+    }
+
+    function renderAdminSetsLists() {
+      const activeList = document.getElementById('admin-active-sets-list');
+      const wonList = document.getElementById('admin-won-sets-list');
+      const activeBadge = document.getElementById('active-sets-badge');
+      if (!activeList || !wonList) return;
+
+      const activeSets = prodState.sets.filter(s => !s.isWon);
+      const wonSets = prodState.sets.filter(s => s.isWon);
+      activeBadge.textContent = `${activeSets.length}件`;
+
+      const renderSetCard = (set, isWonMode) => {
+        const items = set.itemIds.map(id => prodState.items.find(i => i.id === id)).filter(Boolean);
+        return `
+          <div class="p-4 rounded-2xl bg-[#F5F5F7] border border-black/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="space-y-1.5">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-[#1D1D1F]">${escapeHtml(set.name)}</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-white text-[11px] font-medium text-[#1D1D1F] border border-black/5">重み: ${set.weight}</span>
+              </div>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                ${items.map(itm => `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white text-[11px] text-[#1D1D1F] border border-black/5"><img src="${itm.imageDataUrl}" class="w-4 h-4 rounded object-cover"><span>${escapeHtml(itm.name)}</span></span>`).join('')}
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              ${isWonMode ? `<button onclick="restoreSingleSet('${set.id}')" class="apple-pill-btn px-3.5 py-2 rounded-full bg-[#0071E3] text-white text-xs font-medium min-h-[36px]">復元する</button>` : `<button onclick="editSet('${set.id}')" class="apple-pill-btn px-3.5 py-2 rounded-full bg-white text-[#1D1D1F] text-xs font-medium border border-black/10 min-h-[36px]">編集</button>`}
+              <button onclick="confirmDeleteSet('${set.id}')" class="w-9 h-9 rounded-full bg-white flex items-center justify-center text-red-500 border border-black/5"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            </div>
+          </div>
+        `;
+      };
+
+      activeList.innerHTML = activeSets.length > 0 ? activeSets.map(s => renderSetCard(s, false)).join('') : `<p class="text-xs text-[#86868B] text-center py-6">未当選セットがありません</p>`;
+      wonList.innerHTML = wonSets.length > 0 ? wonSets.map(s => renderSetCard(s, true)).join('') : `<p class="text-xs text-[#86868B] text-center py-6">当選済みセットはありません</p>`;
+      lucide.createIcons();
+    }
+
+    function renderProbabilitySettings() {
+      const container = document.getElementById('probability-table-container');
+      const totalBadge = document.getElementById('total-weight-badge');
+      const specialCheck = document.getElementById('setting-special-enabled');
+      const specialWeightInput = document.getElementById('setting-special-weight');
+      const specialPreview = document.getElementById('special-prob-preview');
+      const rootUrlInput = document.getElementById('setting-rootkey-default-url');
+      if (!container) return;
+
+      specialCheck.checked = !!prodState.settings.specialEnabled;
+      specialWeightInput.value = prodState.settings.specialWeight;
+      rootUrlInput.value = prodState.settings.rootKeyDefaultUrl || '';
+      renderSpecialReelPreviews();
+
+      const activeSets = prodState.sets.filter(s => !s.isWon && s.itemIds.length > 0);
+      let totalWeight = activeSets.reduce((sum, s) => sum + (Number(s.weight) || 0), 0);
+      const specialW = prodState.settings.specialEnabled ? Math.max(0, Number(prodState.settings.specialWeight) || 0) : 0;
+      totalWeight += specialW;
+
+      totalBadge.textContent = `有効合計重み: ${totalWeight}`;
+      if (prodState.settings.specialEnabled && totalWeight > 0) {
+        const spPct = ((specialW / totalWeight) * 100).toFixed(2);
+        specialPreview.textContent = `特別枠当選確率：${spPct}%`;
+      } else {
+        specialPreview.textContent = '特別枠は無効です';
+      }
+
+      container.innerHTML = activeSets.map(set => {
+        const pct = totalWeight > 0 ? ((set.weight / totalWeight) * 100).toFixed(2) : '0.00';
+        return `
+          <div class="p-4 rounded-2xl bg-[#F5F5F7] flex items-center justify-between gap-4">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-sm font-semibold text-[#1D1D1F] truncate">${escapeHtml(set.name)}</span>
+                <span class="text-sm font-bold text-[#0071E3]">${pct}%</span>
+              </div>
+              <div class="w-full h-2 rounded-full bg-black/5 overflow-hidden"><div class="h-full bg-[#0071E3] rounded-full" style="width:${Math.min(100, Number(pct))}%"></div></div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <input type="number" min="1" step="1" value="${set.weight}" onchange="updateSetWeightInline('${set.id}', this.value)" class="w-20 px-3 py-1.5 rounded-xl bg-white border border-black/10 text-sm font-semibold text-center">
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function updateSetWeightInline(setId, rawValue) {
+      const val = parseInt(rawValue, 10);
+      if (isNaN(val) || val <= 0) return renderProbabilitySettings();
+      const target = prodState.sets.find(s => s.id === setId);
+      if (!target) return;
+      target.weight = val;
+      await persistAllState();
+      renderProbabilitySettings();
+      renderAdminSetsLists();
+      showToast('重みを更新しました');
+    }
+
+    async function updateSpecialSettings() {
+      prodState.settings.specialEnabled = document.getElementById('setting-special-enabled').checked;
+      const w = parseInt(document.getElementById('setting-special-weight').value, 10);
+      if (!isNaN(w) && w > 0) prodState.settings.specialWeight = w;
+      await persistAllState();
+      renderProbabilitySettings();
+      showToast('特別枠設定を保存しました');
+    }
+
+    async function saveRootKeyDefaultUrl() {
+      prodState.settings.rootKeyDefaultUrl = document.getElementById('setting-rootkey-default-url').value.trim();
+      await persistAllState();
+      showToast('ルートキーURLを保存しました');
+    }
+
+    function renderHistoryList() {
+      const container = document.getElementById('history-list-container');
+      if (!container) return;
+      if (prodState.history.length === 0) {
+        container.innerHTML = `<p class="text-xs text-[#86868B] text-center py-12">履歴がありません</p>`;
+        return;
+      }
+      container.innerHTML = prodState.history.map(rec => {
+        const dt = new Date(rec.timestamp).toLocaleString('ja-JP');
+        return `
+          <div class="p-4 rounded-2xl bg-[#F5F5F7] border border-black/5 flex items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs text-[#86868B]">${dt}</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${rec.drawType === 'special' ? 'bg-[#B48A3E]/15 text-[#B48A3E]' : 'bg-[#0071E3] text-white'}">${rec.drawType === 'special' ? '特別枠' : '通常'}</span>
+              </div>
+              <h4 class="text-sm font-semibold text-[#1D1D1F]">${escapeHtml(rec.setName)}</h4>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function exportHistoryCsv() {
+      if (prodState.history.length === 0) return showToast('履歴がありません', 'error');
+      const header = ['日時', '抽選種別', 'セット名', 'アイテム'];
+      const rows = prodState.history.map(r => [new Date(r.timestamp).toLocaleString('ja-JP'), r.drawType, `"${r.setName}"`, `"${r.items.map(i => i.name).join(' | ')}"`]);
+      triggerFileDownload('\uFEFF' + [header.join(','), ...rows.map(r => r.join(','))].join('\n'), `history.csv`, 'text/csv');
+      showToast('CSVを書き出しました');
+    }
+
+    function confirmClearHistory() {
+      openConfirmDialog('履歴クリア', '履歴をすべて削除しますか？', async () => {
+        prodState.history = [];
+        await persistAllState();
+        renderHistoryList();
+        showToast('履歴をクリアしました');
+      });
+    }
+
+    function exportFullBackup() {
+      triggerFileDownload(JSON.stringify({ app: 'LOTTERY STUDIO', data: prodState }, null, 2), `backup.json`, 'application/json');
+      showToast('バックアップを書き出しました');
+    }
+
+    function handleRestoreFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          prodState = parsed.data;
+          if (!prodState.settings.specialReelImages) {
+            prodState.settings.specialReelImages = ['', '', ''];
+          }
+          persistAllState().then(() => { refreshAllViews(); showToast('復元しました'); });
+        } catch (err) { showToast('ファイル形式エラーです', 'error'); }
+      };
+      reader.readAsText(file);
+    }
+
+    function confirmLoadSampleData() { injectSampleData(false); }
+    function confirmFactoryReset() {
+      openConfirmDialog('初期化', '全データを初期化しますか？', async () => {
+        prodState.items = []; prodState.sets = []; prodState.history = [];
+        prodState.settings.specialReelImages = ['', '', ''];
+        await persistAllState(); refreshAllViews(); showToast('初期化しました');
+      });
+    }
+
+    function addNewSwipeStep(dir) {
+      newSwipeSequenceBuffer.push(dir);
+      renderNewSwipeSequence();
+    }
+    function clearNewSwipeSequence() { newSwipeSequenceBuffer = []; renderNewSwipeSequence(); }
+    function renderNewSwipeSequence() {
+      const box = document.getElementById('new-swipe-sequence-display');
+      if (newSwipeSequenceBuffer.length === 0) box.innerHTML = `<span class="text-xs text-[#86868B]">ボタンで入力してください</span>`;
+      else box.innerHTML = newSwipeSequenceBuffer.join(' - ');
+    }
+    async function saveNewSwipeCommand() {
+      if (newSwipeSequenceBuffer.length < 3) return showToast('3ステップ以上必要です', 'error');
+      prodState.security.swipeHash = await sha256WithSalt(newSwipeSequenceBuffer.join('-'), prodState.security.salt);
+      await persistAllState();
+      showToast('スワイプコマンドを保存しました');
+    }
+    async function saveNewPinCode() {
+      const p = document.getElementById('new-pin-input').value;
+      if (!/^\d{4,}$/.test(p)) return showToast('4桁以上の数字を入力してください', 'error');
+      prodState.security.pinHash = await sha256WithSalt(p, prodState.security.salt);
+      await persistAllState();
+      showToast('PINを保存しました');
+    }
+
+    function downloadManifestJson() {
+      triggerFileDownload(JSON.stringify({ name: "LOTTERY STUDIO", display: "standalone" }, null, 2), 'manifest.json', 'application/json');
+    }
+    function downloadServiceWorkerJs() {
+      triggerFileDownload(`self.addEventListener('fetch', e => {});`, 'service-worker.js', 'application/javascript');
+    }
+    function downloadPlaceholderAppIcon() {
+      const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512;
+      canvas.toBlob(b => triggerFileDownload(b, 'app-icon.png', 'image/png'));
+    }
+
+    function roundRectPath(ctx, x, y, w, h, r) {
+      const radius = Math.max(0, Math.min(r, w / 2, h / 2));
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + w, y, x + w, y + h, radius);
+      ctx.arcTo(x + w, y + h, x, y + h, radius);
+      ctx.arcTo(x, y + h, x, y, radius);
+      ctx.arcTo(x, y, x + w, y, radius);
+      ctx.closePath();
+    }
+
+    function refreshAllViews() {
+      updateSoundIcon();
+      updateDrawScreenAvailability();
+      renderAdminItemsList();
+      renderSetItemSelector();
+      renderAdminSetsLists();
+      renderProbabilitySettings();
+      renderHistoryList();
+    }
+
+    function updateNetworkStatusUI() {
+      const online = navigator.onLine;
+      const dot = document.getElementById('network-dot');
+      if (dot) {
+        dot.className = `w-1.5 h-1.5 rounded-full transition-colors duration-300 ${online ? 'bg-sky-500' : 'bg-amber-500'}`;
+      }
+      const pwaNet = document.getElementById('pwa-net-detail');
+      if (pwaNet) pwaNet.textContent = online ? 'オンライン接続中' : 'オフライン動作中';
+      const pwaCounts = document.getElementById('pwa-data-counts');
+      if (pwaCounts) pwaCounts.textContent = `${prodState.items.length} アイテム / ${prodState.sets.length} セット`;
+    }
+
+    function triggerFileDownload(content, filename, mimeType) {
+      const blob = typeof content === 'string' ? new Blob([content], { type: mimeType }) : content;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = `px-5 py-3 rounded-full shadow-lg text-xs font-medium flex items-center gap-2 fade-scale-in ${type === 'error' ? 'bg-red-600 text-white' : 'bg-[#1D1D1F] text-white'}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 260); }, 3000);
+    }
+
+    function openConfirmDialog(title, message, onConfirm) {
+      const modal = document.getElementById('confirm-modal');
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      document.getElementById('confirm-cancel-btn').onclick = () => { modal.classList.add('hidden'); modal.classList.remove('flex'); };
+      document.getElementById('confirm-ok-btn').onclick = async () => { modal.classList.add('hidden'); modal.classList.remove('flex'); await onConfirm(); };
+      modal.classList.remove('hidden'); modal.classList.add('flex');
+    }
+
+    window.addEventListener('load', async () => {
+      try {
+        await initIndexedDB();
+        await loadAllAppData();
+        refreshAllViews();
+        updateNetworkStatusUI();
+        lucide.createIcons();
+      } catch (err) {}
+    });
+
+    window.addEventListener('online', updateNetworkStatusUI);
+    window.addEventListener('offline', updateNetworkStatusUI);
+  </script>
+</body>
+</html>
